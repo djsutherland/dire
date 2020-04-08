@@ -19,6 +19,16 @@ body {
     color: white;
 }
 
+#error {
+    width: 100%;
+    display: none;  /*display: flex;*/
+    justify-content: center;
+    align-items: center;
+    background-color: red;
+    color: white;
+    padding: 10px;
+}
+
 .join input {
     margin-left: 10px;
 }

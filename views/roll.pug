@@ -3,6 +3,8 @@ extends layout
 block content
   p#welcome(data-nickname=nickname) Welcome, #{nickname}
 
+  #error
+
   #roller
     #dice
       img(data-kind="dictator", src="/img/d4.png")

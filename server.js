@@ -61,12 +61,35 @@ const sidesByKind = {
   master: 20
 };
 
+function noop() {}
+function heartbeat() { this.isAlive = true; }
+
+socketserver.on('connection', ws => {
+  ws.isAlive = true;
+  ws.on('pong', heartbeat);
+});
+
+const interval = setInterval(() => {
+  socketserver.clients.forEach(ws => {
+    if (ws.isAlive === false) {
+      return ws.terminate();
+    } else {
+      ws.isAlive = false;
+      ws.ping(noop);
+    }
+  });
+}, 15000);
+
+socketserver.on('close', () => { clearInterval(interval); });
+
+
 socketserver.on('connection', ws => {
   ws.on('message', data => {
     data = JSON.parse(data);
     switch (data.action) {
       case "hello":
         ws.nickname = data.nickname;
+        console.log(`${ws.nickname} connected`);
         break;
 
       case "roll":
