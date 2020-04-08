@@ -1,11 +1,19 @@
 const path = require('path');
 
 module.exports = {
-    entry: './src/rolls.js',
+    entry: {
+        player: './src/player.js',
+        gm: './src/gm.js'
+    },
     output: {
         path: path.resolve(__dirname, 'public/js'),
-        filename: 'rolls-bundle.js'
+        filename: '[name].bundle.js'
     },
+    // optimization: {
+    //     splitChunks: {
+    //         chunks: 'all'
+    //     }
+    // },
     module: {
         rules: [
             {

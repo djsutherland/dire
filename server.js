@@ -28,13 +28,22 @@ app.get('/', (req, res) => {
 
 app.post('/login/', (req, res) => {
   var nick = req.body.nickname;
-  res.redirect(`/roll/${nick}/`);
+  res.redirect(`/play/${nick}/`);
 });
 
-app.get('/roll/:nickname/', (req, res) => {
-  res.render('roll', {
-    title: 'Dicer: Dice for DIE',
-    nickname: req.params.nickname
+app.get('/play/:nickname/', (req, res) => {
+  res.render('player', {
+    title: 'Dicer: Dice for DIE &ndash; Player View',
+    nickname: req.params.nickname,
+    role: 'player'
+  });
+});
+
+app.get('/GM/:nickname/', (req, res) => {
+  res.render('GM', {
+    title: 'Dicer: Dice for DIE &ndash; GM View',
+    nickname: req.params.nickname,
+    role: 'GM'
   });
 });
 
@@ -96,13 +105,14 @@ const sidesByKind = {
   master: 20
 };
 
-function handleRoll(data) {
+function handleRoll(data, source) {
   let dice = data.dice || [];
   let sides = dice.map(d => sidesByKind[d]);
   let rolls = sides.map(s => Math.floor(Math.random() * s) + 1);
   var result = {
     action: "results",
-    nickname: data.nickname,
+    nickname: source.nickname,
+    kind: source.kind,
     dice: dice,
     rolls: rolls,
     sides: sides,
@@ -124,15 +134,15 @@ socketserver.on('connection', ws => {
     switch (data.action) {
       case "hello":
         ws.nickname = data.nickname;
-        console.log(`${ws.nickname} connected`);
+        ws.role = data.role;
+        console.log(`${ws.nickname} connected as ${ws.role}`);
         ws.send(JSON.stringify(rollsLog));
         break;
       case "roll":
-        data.nickname = ws.nickname;
-        handleRoll(data);
+        handleRoll(data, ws);
         break;
       default:
-        console.log(`Unknown requested action - ${data}`);
+        console.log(`Unknown requested action - ${JSON.stringify(data)}`);
     }
   });
   ws.on('close', e => {

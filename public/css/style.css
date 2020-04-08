@@ -19,6 +19,10 @@ body {
     color: white;
 }
 
+#metadata {
+    display: none;
+}
+
 #error {
     width: 100%;
     display: none;  /*display: flex;*/

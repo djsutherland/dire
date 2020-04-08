@@ -1,0 +1,21 @@
+extends layout
+
+block content
+  #metadata(data-nickname=nickname, data-role=role)
+
+  #error
+
+  block above-roller
+
+  #roller
+    #dice
+      block dice
+        img(data-kind="dictator", src="/img/d4.png")
+        for i in [1, 2, 3, 4, 5, 6]
+          img(data-kind="d6", src="/img/d6.png")
+    #controls
+      button#roll(data-nickname=nickname) Roll!
+
+  #rolls
+
+  block after-roller
