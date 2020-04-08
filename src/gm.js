@@ -1,5 +1,5 @@
 import ready from './ready';
-import {ws} from './rolls';
+import {ws, can_notify} from './rolls';
 
 function setClass(event) {
     ws.send(JSON.stringify({

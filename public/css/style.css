@@ -33,6 +33,16 @@ body {
     padding: 10px;
 }
 
+#notify-alert {
+    width: 100%;
+    display: none;  /*display: flex;*/
+    justify-content: center;
+    align-items: center;
+    background-color: #edde32;
+    color: black;
+    padding: 5px;
+}
+
 .join input {
     margin-left: 10px;
 }
@@ -79,6 +89,21 @@ main * {
     font-size: 16pt;
 }
 
+#safety {
+    background-color: #d294e0;
+    margin: 0;
+    margin-bottom: 20px;
+}
+#safety > * {
+    margin: 5px 0.75em;
+}
+#safety .buttons {
+    display: inline-block;
+}
+#safety .buttons button {
+    margin: 0 2px;
+}
+
 #rolls {
     display: flex;
     flex-direction: column;
@@ -87,15 +112,20 @@ main * {
     display: flex;
     align-items: center;
     border: 1px solid black;
+    padding: 5px;
 }
 .result:not(:last-of-type) {
     border-bottom: none;
 }
+.result.safety {
+    background-color: #ff3030;
+}
 .result .meta {
     text-align: center;
     padding-right: 5px;
-    border-right: 1px solid black;
+    /*border-right: 1px solid black;*/
     width: 8em;
+    height: 100%;
     overflow-wrap: break-word;
 }
 .result .meta .name { }
@@ -103,9 +133,9 @@ main * {
     font-weight: bold;
 }
 .result .meta .time { font-size: 70%; }
-.result .dice {
+.result .body {
     width: 30em;
 }
-.result .dice span {
+.result .body span {
     padding: 0 20px;
 }

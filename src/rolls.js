@@ -7,12 +7,14 @@ export function role() {
   return document.getElementById('metadata').dataset.role;
 }
 
+export let can_notify;
 
 export class WSHandler {
   constructor() {
     this.proto = `ws${window.location.protocol == "https:" ? "s" : ""}`;
     this.handlers = new Map();
     this.handlers.set("results", showResults);
+    this.handlers.set("safety", showSafety);
   }
 
   connect() {
@@ -78,9 +80,9 @@ export function showResults(response) {
       </div>
       <div class="time">${time.toLocaleTimeString()}</div>
     </div>
-    <div class="dice"></div>
+    <div class="body"></div>
   `;
-  var dicenode = node.querySelector('.dice');
+  var dicenode = node.querySelector('.body');
   for (let i = 0; i < response.dice.length; i++) {
     let child = document.createElement('span');
     child.dataset.kind = response.dice[i];
@@ -92,7 +94,40 @@ export function showResults(response) {
   rolls.insertBefore(node, rolls.firstChild);
 }
 
-export function toggleSelected(img) {
+export function showSafety(response) {
+  let time = new Date(response.time);
+
+  let node = document.createElement("div");
+  node.classList.add("result");
+  node.classList.add("safety");
+  node.innerHTML = `
+    <div class="meta">
+      <div class="name ${response.role}">
+        ${response.nickname}
+        ${response.role !== 'player' ? "<span class='role'>(" + response.role + ")</span>" : ""}
+      </div>
+      <div class="time">${time.toLocaleTimeString()}</div>
+    </div>
+    <div class="body"></div>
+  `;
+
+  let bodynode = node.querySelector('.body');
+  let button = document.querySelector(`#safety button[name="${response.choice}"]`);
+
+  bodynode.innerHTML = `<button>${button.innerHTML}</button>`;
+  if (response.text) {
+    bodynode.innerHTML += "<br>" + response.text;
+  }
+
+  let rolls = document.getElementById('rolls');
+  rolls.insertBefore(node, rolls.firstChild);
+
+  if (response.live && can_notify) {
+    new Notification(button.innerHTML, {body: `Someone used the ${button.innerHTML} safety tool.`});
+  }
+}
+
+export function selectedToggler(img) {
   return event => {
     if (img.classList.contains("selected")) {
       img.classList.remove("selected");
@@ -102,13 +137,61 @@ export function toggleSelected(img) {
   };
 }
 
+export function safetyHitter(button) {
+  return event => {
+    let sel = document.getElementById('safety-anon');
+    let anon_or_not = sel.options[sel.selectedIndex].value;
+
+    let textbox = document.getElementById('safety-text');
+
+    ws.send(JSON.stringify({
+      action: "safety",
+      choice: button.getAttribute("name"),
+      anon: anon_or_not,
+      text: textbox.value
+    }));
+
+    sel.selectedIndex = 0;
+    textbox.value = '';
+  };
+}
+
 ready(() => {
   for (let img of document.querySelectorAll("#dice img")) {
-    img.addEventListener("click", toggleSelected(img));
+    img.addEventListener("click", selectedToggler(img));
   }
   document.getElementById("roll").addEventListener("click", roll);
+  for (let button of document.querySelectorAll("#safety button")) {
+    button.addEventListener("click", safetyHitter(button));
+  }
 });
 
 ready(() => {
   ws.connect();
+});
+
+ready(() => {
+  if (!("Notification" in window) || Notification.permission === "denied") {
+    can_notify = false;
+  } else if (Notification.permission === "granted") {
+    can_notify = true;
+  } else {
+    can_notify = null;
+    document.getElementById('notify-alert').style.display = 'flex';
+    document.getElementById('enable-notifications').addEventListener('click', (event) => {
+      let callback = permission => {
+        if (!('permission' in Notification)) {
+          Notification.permission = permission;
+        }
+        can_notify = Notification.permission == "granted";
+        document.getElementById('notify-alert').style.display = 'none';
+      };
+
+      try {
+        Notification.requestPermission().then(callback);
+      } catch (e) {
+        Notification.requestPermission(callback);
+      }
+    });
+  }
 });

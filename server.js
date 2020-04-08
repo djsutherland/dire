@@ -6,7 +6,8 @@ const minimist = require('minimist');
 const WebSocket = require('ws');
 
 let args = minimist(process.argv, {
-  'default': {port: 5000},
+  'default': {port: 5000, debug: false},
+  'boolean': ['debug'],
   'alias': {p: 'port'}
 });
 
@@ -117,7 +118,7 @@ socketserver.on('close', () => { clearInterval(interval); });
 
 
 // the core of the server
-let rollsLog = [];
+let actionsLog = [];
 let playerClasses = new Map();
 
 let handlers = new Map();
@@ -125,7 +126,6 @@ let handlers = new Map();
 handlers.set("hello", (data, source) => {
   source.nickname = data.nickname;
   source.role = data.role;
-  console.log(`${source.nickname} connected as ${source.role}`);
 
   if (source.role === 'player') {
     let cls = playerClasses.get(source.nickname);
@@ -138,7 +138,7 @@ handlers.set("hello", (data, source) => {
     }
   }
 
-  source.send(JSON.stringify(rollsLog));
+  source.send(JSON.stringify(actionsLog));
   tellAboutClients();
 });
 
@@ -168,7 +168,7 @@ handlers.set("roll", (data, source) => {
     sides: sides,
     time: Date.now()
   };
-  rollsLog.push(result);
+  actionsLog.push(result);
   response = JSON.stringify([result]);
   for (let client of socketserver.clients) {
     if (client.readyState === WebSocket.OPEN) {
@@ -176,6 +176,27 @@ handlers.set("roll", (data, source) => {
     }
   }
 });
+
+handlers.set("safety", (data, source) => {
+  let is_anon = data.anon == "anon";
+  let result = {
+    action: "safety",
+    nickname: is_anon ? "Anonymous" : source.nickname,
+    role: is_anon ? "player" : source.role,
+    text: data.text,
+    choice: data.choice,
+    time: Date.now()
+  };
+  actionsLog.push(result);
+  response = JSON.stringify([Object.assign({live: true}, result)]);
+  for (let client of socketserver.clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(response);
+    }
+  }
+});
+
+
 
 
 handlers.set("setClass", (data, source) => {
@@ -258,6 +279,9 @@ function tellAboutClients() {
 socketserver.on('connection', ws => {
   ws.on('message', data => {
     data = JSON.parse(data);
+    if (args.debug) {
+      console.log(data);
+    }
     if (handlers.has(data.action)) {
       handlers.get(data.action)(data, ws);
     } else {

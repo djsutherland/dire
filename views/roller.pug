@@ -5,6 +5,15 @@ block content
 
   #error
 
+  block notify-button
+    #notify-alert
+      p
+        | I'd like permission to notify you when someone uses a safety tool:
+        = ' '
+        button#enable-notifications Enable notifications
+        br
+        | (Or: press the button and deny permissions to make this go away.)
+
   block above-roller
 
   #roller
@@ -19,6 +28,21 @@ block content
           img(data-kind="bad", src="/img/bad.png")
     #controls
       button#roll(data-nickname=nickname) Roll!
+
+  #safety
+    label
+      a(href="https://briebeau.com/thoughty/script-change/") Safety tools:
+    select#safety-anon(name="anon")
+      option(value="anon", selected="selected") Anonymously
+      option(value="notanon") As &ldquo;#{nickname}&rdquo;
+    input#safety-text(type="text", name="text", placeholder="Optional: say why / how to fix?", size=30)
+    .buttons
+      button(name='x-card') ❌ Card
+      button(name='rewind') ⏪ Rewind
+      button(name='pause') ⏸️ Pause
+      button(name='slow') ⚠️ Slow
+      button(name='fast-forward') ⏩️ Fast-forward
+
 
   #rolls
 
