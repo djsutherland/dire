@@ -93,7 +93,8 @@ socketserver.on('close', () => { clearInterval(interval); });
 
 
 // the core of the server
-var rollsLog = [];
+let rollsLog = [];
+let extraDice = new Map();
 const sidesByKind = {
   dictator: 4,
   d6: 6,
@@ -127,6 +128,59 @@ function handleRoll(data, source) {
   });
 }
 
+function getUserData() {
+  let users = {};
+  for (let [nickname, extras] of extraDice) {
+    users[nickname] = {
+      nickname: nickname,
+      role: "player",
+      conns: 0,
+      extraDice: extras
+    };
+  }
+
+  for (let client of socketserver.clients) {
+    let key = client.nickname + (client.role !== 'player' ? ` (${client.role})` : '');
+    if (!(key in users)) {
+      users[key] = {
+        nickname: client.nickname,
+        role: client.role,
+        conns: 0,
+        extraDice: []
+      };
+    }
+    if (client.readyState === WebSocket.OPEN) {
+      users[key].conns++;
+    }
+  }
+  return Object.values(users).sort((a, b) => {
+    if (a.role == "GM" && b.role == "player") {
+      return -1;
+    } else if (a.role == "player" && b.role == "GM") {
+      return 1;
+    }
+    let aName = a.nickname.toLowerCase(),
+        bName = b.nickname.toLowerCase();
+    if (aName < bName) {
+      return -1;
+    } else if (aName > bName) {
+      return 1;
+    } else {
+      return 0;
+    }
+  });
+}
+
+function tellAboutClients() {
+  let userData = getUserData();
+  let msg = JSON.stringify([{action: "users", users: userData}]);
+  for (let client of socketserver.clients) {
+    if (client.readyState === WebSocket.OPEN && client.role == "GM") {
+      client.send(msg);
+    }
+  }
+}
+
 // Hook up the actual responses
 socketserver.on('connection', ws => {
   ws.on('message', data => {
@@ -137,6 +191,7 @@ socketserver.on('connection', ws => {
         ws.role = data.role;
         console.log(`${ws.nickname} connected as ${ws.role}`);
         ws.send(JSON.stringify(rollsLog));
+        tellAboutClients();
         break;
       case "roll":
         handleRoll(data, ws);
@@ -146,6 +201,7 @@ socketserver.on('connection', ws => {
     }
   });
   ws.on('close', e => {
+    tellAboutClients();
     console.log(`${ws.nickname || "[unknown]"} disconnected`);
   });
   ws.on('error', e => {
