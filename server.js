@@ -75,12 +75,14 @@ app.get('/GM/:nickname/', (req, res) => {
 
 var webserver;
 if (args.ssl_key) {
+  console.log("Running on https://");
   webserver = https.createServer({
     key: fs.readFileSync(args.ssl_key),
     cert: fs.readFileSync(args.ssl_cert)
   }, app);
   if (!args.port) { args.port = 443; }
 } else {
+  console.log("Running on http://; pass --ssl_cert and --ssl_key to use https");
   webserver = http.createServer(app);
   if (!args.port) { args.port = 80; }
 }
