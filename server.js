@@ -61,7 +61,7 @@ app.get('/play/:nickname/', (req, res) => {
 });
 
 app.get('/GM/:nickname/', (req, res) => {
-  res.render('GM', {
+  res.render('gm', {
     title: 'Dicer: Dice for DIE &ndash; GM View',
     nickname: req.params.nickname,
     role: 'GM',
