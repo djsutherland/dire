@@ -75,22 +75,30 @@ main * {
     font-size: 16pt;
 }
 
+#rolls {
+    display: flex;
+    flex-direction: column;
+}
 .result {
+    display: flex;
+    align-items: center;
     border: 1px solid black;
-    width: 40%;
+}
+.result:not(:last-of-type) {
+    border-bottom: none;
 }
 .result .meta {
-    display: inline-block;
-    margin-right: 5px;
-    border-right: 1px solid black;
-    padding-right: 5px;
     text-align: center;
-    margin: 0 auto;
+    padding-right: 5px;
+    border-right: 1px solid black;
+    width: 8em;
+    overflow-wrap: break-word;
 }
 .result .meta .name { }
-.result .meta .time {  }
+.result .meta .time { font-size: 70%; }
 .result .dice {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
+    width: 30em;
+}
+.result .dice span {
+    padding: 0 20px;
 }

@@ -6,13 +6,15 @@ const api = (() => {
     ws = new WebSocket(`${proto}://${window.location.host}`);
     ws.onmessage = event => {
       let data = JSON.parse(event.data);
-      switch (data.action) {
-        case "results":
-          showResults(data);
-          break;
-        default:
-          console.error(`Unknown action: ${data}`);
-          break;
+      for (var msg of data) {
+        switch (msg.action) {
+          case "results":
+            showResults(msg);
+            break;
+          default:
+            console.error(`Unknown action:`, msg);
+            break;
+        }
       }
     };
     ws.onopen = event => {

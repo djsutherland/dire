@@ -10,6 +10,10 @@ let args = minimist(process.argv, {
   'alias': {p: 'port'}
 });
 
+
+////////////////////////////////////////////////////////////////////////////////
+// The Express app to specify the HTML server bit; pretty standard.
+
 const app = express();
 app.set('view engine', 'pug');
 app.use(express.urlencoded({extended: false}));
@@ -35,6 +39,9 @@ app.get('/roll/:nickname/', (req, res) => {
 });
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Define the webserver object here; we'll .listen() at the end.
+
 var webserver;
 if (args.ssl_key) {
   webserver = https.createServer({
@@ -47,20 +54,13 @@ if (args.ssl_key) {
   if (!args.port) { args.port = 80; }
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// The websocket server, which actually talks to the client page.
+
 const socketserver = new WebSocket.Server({server: webserver});
 
-function roll(sides) { return Math.floor(Math.random() * sides) + 1; }
-const sidesByKind = {
-  dictator: 4,
-  d6: 6,
-  bad: 6,
-  fool: 6,
-  knight: 8,
-  neo: 10,
-  godbinder: 12,
-  master: 20
-};
-
+// keep-alive stuff, basically from the ws readme
 function noop() {}
 function heartbeat() { this.isAlive = true; }
 
@@ -83,6 +83,41 @@ const interval = setInterval(() => {
 socketserver.on('close', () => { clearInterval(interval); });
 
 
+// the core of the server
+var rollsLog = [];
+const sidesByKind = {
+  dictator: 4,
+  d6: 6,
+  bad: 6,
+  fool: 6,
+  knight: 8,
+  neo: 10,
+  godbinder: 12,
+  master: 20
+};
+
+function handleRoll(data) {
+  let dice = data.dice || [];
+  let sides = dice.map(d => sidesByKind[d]);
+  let rolls = sides.map(s => Math.floor(Math.random() * s) + 1);
+  var result = {
+    action: "results",
+    nickname: data.nickname,
+    dice: dice,
+    rolls: rolls,
+    sides: sides,
+    time: Date.now()
+  };
+  rollsLog.unshift(result);
+  response = JSON.stringify([result]);
+  socketserver.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(response);
+    }
+  });
+}
+
+// Hook up the actual responses
 socketserver.on('connection', ws => {
   ws.on('message', data => {
     data = JSON.parse(data);
@@ -90,27 +125,12 @@ socketserver.on('connection', ws => {
       case "hello":
         ws.nickname = data.nickname;
         console.log(`${ws.nickname} connected`);
+        ws.send(JSON.stringify(rollsLog));
         break;
-
       case "roll":
-        let dice = data.dice || [];
-        let sides = dice.map(d => sidesByKind[d]);
-        let rolls = sides.map(roll);
-        var response = JSON.stringify({
-          action: "results",
-          nickname: ws.nickname,
-          dice: dice,
-          rolls: rolls,
-          sides: sides,
-          time: Date.now()
-        });
-        socketserver.clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(response);
-          }
-        });
+        data.nickname = ws.nickname;
+        handleRoll(data);
         break;
-
       default:
         console.log(`Unknown requested action - ${data}`);
     }
@@ -129,9 +149,10 @@ socketserver.on('connection', ws => {
   });
 });
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Finally start the real server.
+
 webserver.listen(args.port, () => {
  console.log(`Express running → PORT ${webserver.address().port}`);
 });
-
-// webserver.listen(args.socket_port);
-// console.log(`Socket server running → PORT ${args.socket_port}`);
