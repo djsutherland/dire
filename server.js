@@ -6,7 +6,7 @@ const minimist = require('minimist');
 const WebSocket = require('ws');
 
 let args = minimist(process.argv, {
-  'default': {port: 5000, socket_port: 5001},
+  'default': {port: 5000},
   'alias': {p: 'port'}
 });
 
