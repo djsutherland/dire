@@ -101,7 +101,8 @@ socketserver.on('connection', ws => {
           nickname: ws.nickname,
           dice: dice,
           rolls: rolls,
-          sides: sides
+          sides: sides,
+          time: Date.now()
         });
         socketserver.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {

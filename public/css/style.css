@@ -79,7 +79,7 @@ main * {
     border: 1px solid black;
     width: 40%;
 }
-.result .name {
+.result .meta {
     display: inline-block;
     margin-right: 5px;
     border-right: 1px solid black;
@@ -87,9 +87,10 @@ main * {
     text-align: center;
     margin: 0 auto;
 }
+.result .meta .name { }
+.result .meta .time {  }
 .result .dice {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    width: 80%;
 }

@@ -25,7 +25,7 @@ const api = (() => {
     ws.onclose = event => {
       var err = document.getElementById('error');
       err.style.display = 'flex';
-      err.innerHTML = "Disconnected from server! Trying to reconnect&hellip;.";
+      err.innerHTML = "Disconnected from server! Trying to reconnect&hellip;but reloading the page might help too.";
       connect_ws();
     };
   }
@@ -54,10 +54,15 @@ const api = (() => {
   }
 
   function showResults(response) {
+    let time = new Date(response.time);
+
     let node = document.createElement("div");
     node.classList.add("result");
     node.innerHTML = `
-      <div class="name">${response.nickname}</div>
+      <div class="meta">
+        <div class="name">${response.nickname}</div>
+        <div class="time">${time.toLocaleTimeString()}</div>
+      </div>
       <div class="dice"></div>
     `;
     var dicenode = node.querySelector('.dice');
