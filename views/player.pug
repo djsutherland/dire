@@ -1,7 +1,9 @@
 extends roller
 
 block above-roller
-  p#welcome Welcome, #{nickname}
+  p#welcome
+    | Welcome, #{nickname}.
+    span#class-id
 
 block script
   script(type="text/javascript", src="/js/player.bundle.js")

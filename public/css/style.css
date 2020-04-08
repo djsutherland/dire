@@ -19,7 +19,7 @@ body {
     color: white;
 }
 
-#metadata {
+#metadata, #diceselector {
     display: none;
 }
 

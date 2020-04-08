@@ -11,6 +11,27 @@ let args = minimist(process.argv, {
 });
 
 
+const sidesByKind = {
+  dictator: 4,
+  d6: 6,
+  bad: 6,
+  fool: 6,
+  fallen: 6,
+  knight: 8,
+  neo: 10,
+  godbinder: 12,
+  master: 20
+};
+const classNames = {
+  dictator: "the Dictator",
+  fool: "the Fool",
+  fallen: "a Fallen",
+  knight: "the Emotion Knight",
+  neo: "the Neo",
+  godbinder: "the Godbinder",
+  master: "the Master"
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // The Express app to specify the HTML server bit; pretty standard.
 
@@ -43,7 +64,8 @@ app.get('/GM/:nickname/', (req, res) => {
   res.render('GM', {
     title: 'Dicer: Dice for DIE &ndash; GM View',
     nickname: req.params.nickname,
-    role: 'GM'
+    role: 'GM',
+    classNames: classNames,
   });
 });
 
@@ -94,21 +116,46 @@ socketserver.on('close', () => { clearInterval(interval); });
 
 // the core of the server
 let rollsLog = [];
-let extraDice = new Map();
-const sidesByKind = {
-  dictator: 4,
-  d6: 6,
-  bad: 6,
-  fool: 6,
-  knight: 8,
-  neo: 10,
-  godbinder: 12,
-  master: 20
-};
+let playerClasses = new Map();
 
-function handleRoll(data, source) {
+let handlers = new Map();
+
+handlers.set("hello", (data, source) => {
+  source.nickname = data.nickname;
+  source.role = data.role;
+  console.log(`${source.nickname} connected as ${source.role}`);
+
+  if (source.role === 'player') {
+    let cls = playerClasses.get(source.nickname);
+    if (cls !== undefined) {
+      source.send(JSON.stringify([{
+        action: 'getClass',
+        class: cls,
+        className: classNames[cls]
+      }]));
+    }
+  }
+
+  source.send(JSON.stringify(rollsLog));
+  tellAboutClients();
+});
+
+handlers.set("roll", (data, source) => {
   let dice = data.dice || [];
-  let sides = dice.map(d => sidesByKind[d]);
+  let sides = dice.map(d => {
+    if (d === "class") {
+      let cls = playerClasses.get(source.nickname);
+      if (cls !== undefined) {
+        return sidesByKind[cls];
+      } else {
+        console.error(`Asked for class dice from ${source.nickname} without a class; ignoring.`);
+        return 0;
+      }
+    } else {
+      return sidesByKind[d];
+    }
+  }
+  );
   let rolls = sides.map(s => Math.floor(Math.random() * s) + 1);
   var result = {
     action: "results",
@@ -121,21 +168,44 @@ function handleRoll(data, source) {
   };
   rollsLog.push(result);
   response = JSON.stringify([result]);
-  socketserver.clients.forEach(client => {
+  for (let client of socketserver.clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(response);
     }
-  });
-}
+  }
+});
+
+
+handlers.set("setClass", (data, source) => {
+  if (source.role != "GM") {
+    console.error(`Attempt to set class by ${source.nickname} (${source.role}):`, data);
+    return;
+  }
+  playerClasses.set(data.nickname, data.class);
+  tellAboutClients();
+
+  let msg = JSON.stringify([{
+    action: "getClass",
+    class: data.class,
+    className: classNames[data.class]
+  }]);
+  for (let client of socketserver.clients) {
+    if (client.nickname == data.nickname && client.role == "player" &&
+        client.readyState === WebSocket.OPEN) {
+      client.send(msg);
+    }
+  }
+});
+
 
 function getUserData() {
   let users = {};
-  for (let [nickname, extras] of extraDice) {
+  for (let [nickname, cls] of playerClasses) {
     users[nickname] = {
       nickname: nickname,
       role: "player",
       conns: 0,
-      extraDice: extras
+      class: cls
     };
   }
 
@@ -146,7 +216,7 @@ function getUserData() {
         nickname: client.nickname,
         role: client.role,
         conns: 0,
-        extraDice: []
+        class: client.role === "GM" ? "master" : "none"
       };
     }
     if (client.readyState === WebSocket.OPEN) {
@@ -181,35 +251,26 @@ function tellAboutClients() {
   }
 }
 
+
 // Hook up the actual responses
 socketserver.on('connection', ws => {
   ws.on('message', data => {
     data = JSON.parse(data);
-    switch (data.action) {
-      case "hello":
-        ws.nickname = data.nickname;
-        ws.role = data.role;
-        console.log(`${ws.nickname} connected as ${ws.role}`);
-        ws.send(JSON.stringify(rollsLog));
-        tellAboutClients();
-        break;
-      case "roll":
-        handleRoll(data, ws);
-        break;
-      default:
-        console.log(`Unknown requested action - ${JSON.stringify(data)}`);
+    if (handlers.has(data.action)) {
+      handlers.get(data.action)(data, ws);
+    } else {
+      console.error(`Unknown requested action - ${JSON.stringify(data)}`);
     }
   });
   ws.on('close', e => {
     tellAboutClients();
-    console.log(`${ws.nickname || "[unknown]"} disconnected`);
   });
   ws.on('error', e => {
     switch (e.code) {
       case "ECONNRESET":
         break;
       default:
-        console.log(`client ${ws.nickname || "[unknown]"} error: ${e}`);
+        console.error(`client ${ws.nickname || "[unknown]"} error: `, e);
         break;
     }
   });

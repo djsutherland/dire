@@ -6,8 +6,19 @@ block above-roller
       tr
         th name
         th conns
-        th extra dice
+        th class
     tbody
+
+  #diceselector
+    select
+      option(value="none") &ndash;
+      for className, classVal in classNames
+        option(value=classVal)
+          = className
+
+block my-dice
+  for className, classVal in classNames
+    img(data-kind=classVal, src=`/img/${classVal}.png`)
 
 
 block script
