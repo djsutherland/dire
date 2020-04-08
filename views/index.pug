@@ -1,0 +1,11 @@
+extends layout
+
+block content
+  form.join(action="/login/", method="POST")
+    p
+      label(for="nickname") Who are you?
+      input#nickname(type="text",
+                     name="nickname",
+                     placeholder="t3h PeNgU1N oF d00m",
+                     size="20")
+      input(type="submit", value="Join")

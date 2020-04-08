@@ -1,0 +1,85 @@
+/* https://css-tricks.com/inheriting-box-sizing-probably-slightly-better-best-practice/ */
+html {
+    box-sizing: border-box;
+}
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+
+body {
+    margin: 0;
+}
+
+.header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #525286;
+    color: white;
+}
+
+.join input {
+    margin-left: 10px;
+}
+
+main * {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+#roller {
+    width: 90%;
+    overflow-x: scroll;
+    background-color: #ccc;
+    margin: 20px auto;
+    padding: 10px;
+}
+
+#dice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#dice img {
+    box-sizing: content-box;
+    height: 75px;
+    margin: 0 5px;
+    padding: 5px;
+    border: 2px solid #ccc;
+}
+#dice img.selected {
+    border: 2px solid red;
+    background-color: #aaa;
+}
+
+#controls {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#controls button {
+    font-size: 16pt;
+}
+
+.result {
+    border: 1px solid black;
+    width: 40%;
+}
+.result .name {
+    display: inline-block;
+    margin-right: 5px;
+    border-right: 1px solid black;
+    padding-right: 5px;
+    text-align: center;
+    margin: 0 auto;
+}
+.result .dice {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 80%;
+}
