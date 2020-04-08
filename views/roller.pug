@@ -29,6 +29,12 @@ block content
     #controls
       button#roll(data-nickname=nickname) Roll!
 
+  #chat
+    form#chat-form
+      label(for="chatbox") Chat message:
+      input#chatbox(type="text", name="text", placeholder="Hey everyone!")
+      input(type="submit", value="Send")
+
   #safety
     label
       a(href="https://briebeau.com/thoughty/script-change/") Safety tools:

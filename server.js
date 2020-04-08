@@ -169,7 +169,7 @@ handlers.set("roll", (data, source) => {
     time: Date.now()
   };
   actionsLog.push(result);
-  response = JSON.stringify([result]);
+  let response = JSON.stringify([result]);
   for (let client of socketserver.clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(response);
@@ -188,7 +188,7 @@ handlers.set("safety", (data, source) => {
     time: Date.now()
   };
   actionsLog.push(result);
-  response = JSON.stringify([Object.assign({live: true}, result)]);
+  let response = JSON.stringify([Object.assign({live: true}, result)]);
   for (let client of socketserver.clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(response);
@@ -196,6 +196,22 @@ handlers.set("safety", (data, source) => {
   }
 });
 
+handlers.set("chat", (data, source) => {
+  let result = {
+    action: "chat",
+    nickname: source.nickname,
+    role: source.role,
+    text: data.text,
+    time: Date.now()
+  };
+  actionsLog.push(result);
+  let response = JSON.stringify([result]);
+  for (let client of socketserver.clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(response);
+    }
+  }
+});
 
 
 

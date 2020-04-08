@@ -1,4 +1,5 @@
 import ready from './ready';
+import escape from 'lodash/escape'; 
 
 export function nickname() {
   return document.getElementById('metadata').dataset.nickname;
@@ -15,6 +16,7 @@ export class WSHandler {
     this.handlers = new Map();
     this.handlers.set("results", showResults);
     this.handlers.set("safety", showSafety);
+    this.handlers.set("chat", showChat);
   }
 
   connect() {
@@ -67,7 +69,8 @@ export function roll() {
   selected.forEach(img => img.classList.remove("selected"));
 }
 
-export function showResults(response) {
+
+export function setupResultLine(response) {
   let time = new Date(response.time);
 
   let node = document.createElement("div");
@@ -82,50 +85,42 @@ export function showResults(response) {
     </div>
     <div class="body"></div>
   `;
-  var dicenode = node.querySelector('.body');
+
+  let rolls = document.getElementById('rolls');
+  rolls.insertBefore(node, rolls.firstChild);
+
+  return node.querySelector('.body');
+}
+
+export function showResults(response) {
+  let bodynode = setupResultLine(response);
   for (let i = 0; i < response.dice.length; i++) {
     let child = document.createElement('span');
     child.dataset.kind = response.dice[i];
     child.innerHTML = `d${response.sides[i]}: <b>${response.rolls[i]}</b>`;
-    dicenode.appendChild(child);
+    bodynode.appendChild(child);
   }
-
-  let rolls = document.getElementById('rolls');
-  rolls.insertBefore(node, rolls.firstChild);
 }
 
 export function showSafety(response) {
-  let time = new Date(response.time);
+  let bodynode = setupResultLine(response);
 
-  let node = document.createElement("div");
-  node.classList.add("result");
-  node.classList.add("safety");
-  node.innerHTML = `
-    <div class="meta">
-      <div class="name ${response.role}">
-        ${response.nickname}
-        ${response.role !== 'player' ? "<span class='role'>(" + response.role + ")</span>" : ""}
-      </div>
-      <div class="time">${time.toLocaleTimeString()}</div>
-    </div>
-    <div class="body"></div>
-  `;
-
-  let bodynode = node.querySelector('.body');
   let button = document.querySelector(`#safety button[name="${response.choice}"]`);
-
   bodynode.innerHTML = `<button>${button.innerHTML}</button>`;
   if (response.text) {
-    bodynode.innerHTML += "<br>" + response.text;
+    bodynode.innerHTML += "<br>" + escape(response.text); //escape(response.text);
   }
-
-  let rolls = document.getElementById('rolls');
-  rolls.insertBefore(node, rolls.firstChild);
 
   if (response.live && can_notify) {
     new Notification(button.innerHTML, {body: `Someone used the ${button.innerHTML} safety tool.`});
   }
 }
+
+export function showChat(response) {
+  let bodynode = setupResultLine(response);
+  bodynode.innerHTML = escape(response.text);
+}
+
 
 export function selectedToggler(img) {
   return event => {
@@ -156,6 +151,13 @@ export function safetyHitter(button) {
   };
 }
 
+export function sendChat(event) {
+  let textbox = document.getElementById('chatbox');
+  ws.send(JSON.stringify({action: "chat", text: textbox.value}));
+  textbox.value = '';
+  event.preventDefault();
+}
+
 ready(() => {
   for (let img of document.querySelectorAll("#dice img")) {
     img.addEventListener("click", selectedToggler(img));
@@ -164,6 +166,7 @@ ready(() => {
   for (let button of document.querySelectorAll("#safety button")) {
     button.addEventListener("click", safetyHitter(button));
   }
+  document.getElementById('chat-form').addEventListener('submit', sendChat);
 });
 
 ready(() => {

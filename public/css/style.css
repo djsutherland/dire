@@ -89,10 +89,14 @@ main * {
     font-size: 16pt;
 }
 
+#chatbox {
+    width: 60%;
+    margin: 0 10px;
+}
+
 #safety {
     background-color: #d294e0;
-    margin: 0;
-    margin-bottom: 20px;
+    margin: 20px 0;
 }
 #safety > * {
     margin: 5px 0.75em;
@@ -135,7 +139,14 @@ main * {
 .result .meta .time { font-size: 70%; }
 .result .body {
     width: 30em;
+    text-align: left;
 }
 .result .body span {
     padding: 0 20px;
+}
+.result .body span:first-of-type {
+    padding-left: 0;
+}
+.result .body span:last-of-type {
+    padding-right: 0;
 }
