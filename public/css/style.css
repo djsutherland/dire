@@ -99,6 +99,9 @@ main * {
     overflow-wrap: break-word;
 }
 .result .meta .name { }
+.result .meta .name.GM .role {
+    font-weight: bold;
+}
 .result .meta .time { font-size: 70%; }
 .result .dice {
     width: 30em;

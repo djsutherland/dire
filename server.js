@@ -112,13 +112,13 @@ function handleRoll(data, source) {
   var result = {
     action: "results",
     nickname: source.nickname,
-    kind: source.kind,
+    role: source.role,
     dice: dice,
     rolls: rolls,
     sides: sides,
     time: Date.now()
   };
-  rollsLog.unshift(result);
+  rollsLog.push(result);
   response = JSON.stringify([result]);
   socketserver.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {

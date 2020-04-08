@@ -72,7 +72,10 @@ export function showResults(response) {
   node.classList.add("result");
   node.innerHTML = `
     <div class="meta">
-      <div class="name">${response.nickname}</div>
+      <div class="name ${response.role}">
+        ${response.nickname}
+        ${response.role !== 'player' ? "<span class='role'>(" + response.role + ")</span>" : ""}
+      </div>
       <div class="time">${time.toLocaleTimeString()}</div>
     </div>
     <div class="dice"></div>
