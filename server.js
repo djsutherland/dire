@@ -5,33 +5,17 @@ const https = require('https');
 const minimist = require('minimist');
 const WebSocket = require('ws');
 
+const gameData = require('./src/game-data');
+sidesByKind = gameData.sidesByKind;
+classNames = gameData.classNames;
+
+
 let args = minimist(process.argv, {
   'default': {port: 5000, debug: false},
   'boolean': ['debug'],
   'alias': {p: 'port'}
 });
 
-
-const sidesByKind = {
-  dictator: 4,
-  d6: 6,
-  bad: 6,
-  fool: 6,
-  fallen: 6,
-  knight: 8,
-  neo: 10,
-  godbinder: 12,
-  master: 20
-};
-const classNames = {
-  dictator: "the Dictator",
-  fool: "the Fool",
-  fallen: "a Fallen",
-  knight: "the Emotion Knight",
-  neo: "the Neo",
-  godbinder: "the Godbinder",
-  master: "the Master"
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 // The Express app to specify the HTML server bit; pretty standard.
@@ -67,6 +51,7 @@ app.get('/GM/:nickname/', (req, res) => {
     nickname: req.params.nickname,
     role: 'GM',
     classNames: classNames,
+    sidesByKind: sidesByKind
   });
 });
 
@@ -142,20 +127,8 @@ handlers.set("hello", (data, source) => {
 
 handlers.set("roll", (data, source) => {
   let dice = data.dice || [];
-  let sides = dice.map(d => {
-    if (d === "class") {
-      let cls = playerClasses.get(source.nickname);
-      if (cls === undefined || cls === "none" || cls === "fallen") {
-        console.error(`Asked for class dice from ${source.nickname} class (${cls}); ignoring.`);
-        return 0;
-      } else {
-        return sidesByKind[cls];
-      }
-    } else {
-      return sidesByKind[d];
-    }
-  }
-  );
+  let sides = dice.map(
+    d => sidesByKind[d === "class" ? playerClasses.get(source.nickname) : d]);
   let rolls = sides.map(s => Math.floor(Math.random() * s) + 1);
   var result = {
     action: "results",
@@ -221,11 +194,7 @@ handlers.set("setClass", (data, source) => {
   playerClasses.set(data.nickname, data.class);
   tellAboutClients();
 
-  let msg = JSON.stringify([{
-    action: "getClass",
-    class: data.class,
-    className: classNames[data.class]
-  }]);
+  let msg = JSON.stringify([{action: "getClass", class: data.class}]);
   for (let client of socketserver.clients) {
     if (client.nickname == data.nickname && client.role == "player" &&
         client.readyState === WebSocket.OPEN) {

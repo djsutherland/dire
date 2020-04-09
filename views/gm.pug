@@ -19,7 +19,8 @@ block above-roller
 block my-dice
   #my-dice
     for className, classVal in classNames
-      img(data-kind=classVal, src=`/img/${classVal}.png`)
+      if sidesByKind[classVal]
+        img(data-kind=classVal, src=`/img/${classVal}.png`)
 
 
 block script

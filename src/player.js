@@ -1,15 +1,17 @@
 import './dom-polyfills';
 import ready from './ready';
-import {ws} from './rolls';
+import {ws, sidesByKind, classNames} from './rolls';
 
 ws.handlers.set("getClass", msg => {
   let classId = document.getElementById("class-id");
-  if (msg.class === "none") {
+
+  if (!sidesByKind[msg.class]) {
     document.querySelectorAll("#my-dice").forEach(d => d.remove());
-    classId.innerHTML = "";
-  } else if (msg.class === "fallen") {
-    document.querySelectorAll("#my-dice").forEach(d => d.remove());
-    classId.innerHTML = ` You're ${msg.className}.`;
+    if (classNames[msg.class]) {
+      classId.innerHTML = ` You're ${classNames[msg.class]}.`;
+    } else {
+      classId.innerHTML = "";
+    }
   } else {
     // get or create #my-die, inside #my-dice, inside #dice
     let die = document.getElementById('my-die');
@@ -29,7 +31,7 @@ ws.handlers.set("getClass", msg => {
     }
     console.log("setting on #my-die");
     die.setAttribute("src", `/img/${msg.class}.png`);
-    classId.innerHTML = ` You're ${msg.className}.`;
+    classId.innerHTML = ` You're ${classNames[msg.class]}.`;
     console.log("done");
   }
 });

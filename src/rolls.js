@@ -1,5 +1,6 @@
 import ready from './ready';
 import escape from 'lodash/escape'; 
+export {sidesByKind, classNames} from './game-data';
 
 export function nickname() {
   return document.getElementById('metadata').dataset.nickname;
