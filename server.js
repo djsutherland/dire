@@ -129,13 +129,11 @@ handlers.set("hello", (data, source) => {
 
   if (source.role === 'player') {
     let cls = playerClasses.get(source.nickname);
-    if (cls !== undefined) {
-      source.send(JSON.stringify([{
-        action: 'getClass',
-        class: cls,
-        className: classNames[cls]
-      }]));
-    }
+    source.send(JSON.stringify([{
+      action: 'getClass',
+      class: cls || "none",
+      className: classNames[cls]
+    }]));
   }
 
   source.send(JSON.stringify(actionsLog));
@@ -147,11 +145,11 @@ handlers.set("roll", (data, source) => {
   let sides = dice.map(d => {
     if (d === "class") {
       let cls = playerClasses.get(source.nickname);
-      if (cls !== undefined) {
-        return sidesByKind[cls];
-      } else {
-        console.error(`Asked for class dice from ${source.nickname} without a class; ignoring.`);
+      if (cls === undefined || cls === "none" || cls === "fallen") {
+        console.error(`Asked for class dice from ${source.nickname} class (${cls}); ignoring.`);
         return 0;
+      } else {
+        return sidesByKind[cls];
       }
     } else {
       return sidesByKind[d];

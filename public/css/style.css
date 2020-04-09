@@ -150,3 +150,9 @@ main * {
 .result .body span:last-of-type {
     padding-right: 0;
 }
+.result .body span[data-kind="bad"] {
+    color: red;
+}
+.result .body span[data-kind="class"] {
+    color: purple;
+}

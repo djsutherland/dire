@@ -17,8 +17,9 @@ block above-roller
           = className
 
 block my-dice
-  for className, classVal in classNames
-    img(data-kind=classVal, src=`/img/${classVal}.png`)
+  #my-dice
+    for className, classVal in classNames
+      img(data-kind=classVal, src=`/img/${classVal}.png`)
 
 
 block script
