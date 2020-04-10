@@ -23,9 +23,11 @@ block content
         block base-dice
           for i in [1, 2, 3, 4, 5, 6]
             img(data-kind="d6", src="/img/d6.png")
-          img(data-kind="bad", src="/img/bad.png")
+          img(id="bad-die", data-kind="bad", src="/img/bad.png")
     #controls
-      button#roll(data-nickname=nickname) Roll!
+      button#fewer-d6 Fewer d6es
+      button#roll Roll!
+      button#more-d6 More d6es
 
   #safety
     label

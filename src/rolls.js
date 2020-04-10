@@ -164,10 +164,32 @@ export function sendChat(event) {
   event.preventDefault();
 }
 
+export function addAd6(event) {
+  let die = document.createElement('img');
+  die.setAttribute("src", "/img/d6.png");
+  die.setAttribute("data-kind", "d6");
+  die.addEventListener("click", selectedToggler(die));
+  document.getElementById('base-dice').prepend(die);
+
+  document.getElementById("fewer-d6").removeAttribute("disabled");
+}
+
+export function removeAd6(event) {
+  let dice = document.querySelectorAll("#base-dice img[data-kind='d6']");
+  dice[0].remove();
+  if (dice.length <= 4) {
+    document.getElementById("fewer-d6").setAttribute("disabled", "disabled");
+  }
+}
+
+
 ready(() => {
   for (let img of document.querySelectorAll("#dice img")) {
     img.addEventListener("click", selectedToggler(img));
   }
+  document.getElementById("roll").addEventListener("click", roll);
+  document.getElementById("more-d6").addEventListener("click", addAd6);
+  document.getElementById("fewer-d6").addEventListener("click", removeAd6);
   document.getElementById("roll").addEventListener("click", roll);
   for (let button of document.querySelectorAll("#safety button")) {
     button.addEventListener("click", safetyHitter(button));
