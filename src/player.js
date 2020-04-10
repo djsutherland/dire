@@ -26,7 +26,7 @@ ws.handlers.set("getClass", msg => {
       }
       die = document.createElement('img');
       die.setAttribute('id', 'my-die');
-      die.addEventListener("click", selectedToggler(img));
+      die.addEventListener("click", selectedToggler(die));
       div.prepend(die);
       console.log("#my-die created", die);
     }
