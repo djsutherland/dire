@@ -1,6 +1,6 @@
 import './dom-polyfills';
 import ready from './ready';
-import {ws, sidesByKind, classNames} from './rolls';
+import {ws, sidesByKind, classNames, selectedToggler} from './rolls';
 
 ws.handlers.set("getClass", msg => {
   let classId = document.getElementById("class-id");
@@ -26,6 +26,7 @@ ws.handlers.set("getClass", msg => {
       }
       die = document.createElement('img');
       die.setAttribute('id', 'my-die');
+      die.addEventListener("click", selectedToggler(img));
       div.prepend(die);
       console.log("#my-die created", die);
     }
