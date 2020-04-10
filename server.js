@@ -235,8 +235,8 @@ function getUserData() {
     } else if (a.role == "player" && b.role == "GM") {
       return 1;
     }
-    let aName = a.nickname.toLowerCase(),
-        bName = b.nickname.toLowerCase();
+    let aName = (a.nickname || "-").toLowerCase(),
+        bName = (b.nickname || "-").toLowerCase();
     if (aName < bName) {
       return -1;
     } else if (aName > bName) {
