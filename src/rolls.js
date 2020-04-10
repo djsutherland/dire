@@ -61,6 +61,9 @@ export let ws = new WSHandler();
 
 export function roll() {
   let selected = document.querySelectorAll("#dice img.selected");
+  if (selected.length == 0) {
+    return;
+  }
 
   ws.send(JSON.stringify({
     action: "roll",
@@ -147,14 +150,15 @@ export function safetyHitter(button) {
       text: textbox.value
     }));
 
-    sel.selectedIndex = 0;
     textbox.value = '';
   };
 }
 
 export function sendChat(event) {
   let textbox = document.getElementById('chatbox');
-  ws.send(JSON.stringify({action: "chat", text: textbox.value}));
+  if (textbox.value.trim()) {
+    ws.send(JSON.stringify({action: "chat", text: textbox.value}));
+  }
   textbox.value = '';
   event.preventDefault();
 }
