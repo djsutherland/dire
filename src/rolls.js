@@ -79,6 +79,7 @@ export function setupResultLine(response) {
 
   let node = document.createElement("div");
   node.classList.add("result");
+  node.classList.add(response.action);
   node.innerHTML = `
     <div class="meta">
       <div class="name ${response.role}">

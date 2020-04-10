@@ -15,8 +15,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #525286;
-    color: white;
+    background-color: black;
+    color: #b23;
 }
 
 #metadata, #diceselector {
@@ -54,10 +54,10 @@ main * {
 }
 
 #roller {
-    width: 90%;
+    width: 100%;
     overflow-x: scroll;
     background-color: #ccc;
-    margin: 20px auto;
+    margin-top: 5px;
     padding: 10px;
 }
 
@@ -91,12 +91,12 @@ main * {
 
 #chatbox {
     width: 60%;
-    margin: 0 10px;
+    margin: 10px;
 }
 
 #safety {
     background-color: #d294e0;
-    margin: 20px 0;
+    margin: 0;
 }
 #safety > * {
     margin: 5px 0.75em;
@@ -141,18 +141,24 @@ main * {
     width: 30em;
     text-align: left;
 }
-.result .body span {
+
+.result.chat {
+    background-color: #ffd;
+}
+
+/* dice rolls */
+.result.results .body span {
     padding: 0 20px;
 }
-.result .body span:first-of-type {
+.result.results .body span:first-of-type {
     padding-left: 0;
 }
-.result .body span:last-of-type {
+.result.results .body span:last-of-type {
     padding-right: 0;
 }
-.result .body span[data-kind="bad"] {
+.result.results .body span[data-kind="bad"] {
     color: red;
 }
-.result .body span[data-kind="class"] {
+.result.results .body span[data-kind="class"] {
     color: purple;
 }
