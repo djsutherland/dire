@@ -157,10 +157,10 @@ main * {
 }
 
 .result.chat {
-    background-color: #ffd;
+    background-color: #ffc;
 }
 .result.user-status {
-    background-color: #ffc266;
+    background-color: #fea;
 }
 .result.user-status .body {
     font-style: italic;
