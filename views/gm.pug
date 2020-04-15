@@ -25,6 +25,12 @@ block my-dice
       if sidesByKind[classVal]
         img(data-kind=classVal, src=`/img/${classVal}.png`)
 
+block after-chat
+  form#emote-form
+    label(for="emotebox") Emote message:
+    - let d = `${username} has spent a cheat token.`;
+    input#emotebox(type="text", name="text", data-default=d, value=d)
+    input(type="submit", value="Send")
 
 block script
   script(type="text/javascript", src="/js/gm.bundle.js")

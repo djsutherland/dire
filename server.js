@@ -380,6 +380,9 @@ function buildSocketServer(webserver) {
   handlers.set("chat", (data, source) => {
     sendAction(userData.get(source.username), {action: "chat", text: data.text});
   });
+  handlers.set("user-status", (data, source) => {
+    sendAction(userData.get(source.username), {action: "user-status", text: data.text});
+  });
 
 
   handlers.set("setClass", checkUserIsGM((doer, data, source) => {

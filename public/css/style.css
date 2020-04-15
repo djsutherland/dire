@@ -103,7 +103,7 @@ main * {
     font-size: 16pt;
 }
 
-#chatbox {
+#chatbox, #emotebox {
     width: 60%;
     margin: 10px;
 }
@@ -161,6 +161,9 @@ main * {
 }
 .result.user-status {
     background-color: #ffc266;
+}
+.result.user-status .body {
+    font-style: italic;
 }
 
 /* dice rolls */

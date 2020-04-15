@@ -69,4 +69,14 @@ ready(() => {
     checkbox.addEventListener('change', () => {
         ws.send(JSON.stringify({action: 'allowMultipleGMs', value: checkbox.checked}));
     });
+
+    let emoteForm = document.getElementById('emote-form');
+    emoteForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      let textbox = document.getElementById('emotebox');
+      if (textbox.value.trim()) {
+        ws.send(JSON.stringify({action: "user-status", text: textbox.value}));
+      }
+      textbox.value = textbox.dataset.default;
+    });
 });
