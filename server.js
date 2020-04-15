@@ -13,6 +13,8 @@ const gameData = require('./src/game-data');
 sidesByKind = gameData.sidesByKind;
 classNames = gameData.classNames;
 
+let siteName = 'DIRE: the DIE Internet Rolling Engine';
+
 
 class DefaultMap extends Map {
   constructor(getDefault, ...args) {
@@ -93,7 +95,7 @@ function buildExpressApp(sessionParser) {
     delete req.session.msg;
 
     res.render('index', {
-      title: 'Dicer: Dice for DIE',
+      title: siteName,
       msg: msg,
     });
   });
@@ -167,7 +169,7 @@ function buildExpressApp(sessionParser) {
 
   app.get('/play/', loginRequired((req, res) => {
     res.render('player', {
-      title: 'Dicer: Dice for DIE &ndash; Player View',
+      title: `${siteName} - Playing`,
       username: req.session.username,
       role: 'player'
     });
@@ -185,7 +187,7 @@ function buildExpressApp(sessionParser) {
     }
 
     res.render('gm', {
-      title: 'Dicer: Dice for DIE &ndash; GM View',
+      title: `${siteName} – GMing`,
       username: req.session.username,
       role: 'GM',
       classNames: classNames,
