@@ -172,7 +172,7 @@ main * {
 .result.rolls .body span[data-kind="bad"] {
     color: red;
 }
-.result.rolls .body span[data-kind="class"] {
+.result.rolls .body span:not([data-kind="d6"]):not([data-kind="bad"]) {
     color: purple;
 }
 .result.rolls .body span.success {

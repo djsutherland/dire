@@ -108,7 +108,8 @@ export function showRolls(response) {
     let roll = response.rolls[i];
     let child = document.createElement('span');
     child.dataset.kind = roll.kind;
-    child.innerHTML = `d${roll.sides}: <b title="${roll.roll}">${roll.display || roll.roll}</b>`;
+    child.setAttribute("title", roll.roll);
+    child.innerHTML = `d${roll.sides}: <b>${roll.display || roll.roll}</b>`;
     if (roll.success) {
       child.classList.add("success");
     }
