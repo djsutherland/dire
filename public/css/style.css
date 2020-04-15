@@ -125,6 +125,7 @@ main * {
 #rolls {
     display: flex;
     flex-direction: column;
+    margin-bottom: 20px;
 }
 .result {
     display: flex;
@@ -167,20 +168,25 @@ main * {
 }
 
 /* dice rolls */
-.result.rolls .body span {
+.roll {
     padding: 2px 10px;
     margin: 2px 10px;
     display: inline-block;
 }
-.result.rolls .body span[data-kind="bad"] {
-    color: red;
+.roll .value {
+    font-weight: bold;
 }
-.result.rolls .body span:not([data-kind="d6"]):not([data-kind="bad"]) {
-    color: purple;
+
+.roll[data-kind="bad"] { color: red; }
+.roll:not([data-kind="d6"]):not([data-kind="bad"]) { color: purple; }
+.roll:not([data-kind="d6"]):not([data-kind="bad"]) .label {  }
+
+.roll[data-status="success"], .roll[data-status="special"] { background-color: #f1adff; }
+.roll[data-kind="d6"][data-status="success"], .roll[data-kind="d6"][data-status="special"] {
+    background-color: #ddf;
 }
-.result.rolls .body span.success {
-    background-color: #afa;
-}
-.result.rolls .body span.success[data-kind="bad"] {
-    background-color: #ffdfdf;
-}
+
+.roll[data-status="special"] { border: 2px dashed black; }
+.roll[data-status="n/a"] { border: 1px dotted black; }
+
+.roll[data-status="badness"] { background-color: #fcc; }

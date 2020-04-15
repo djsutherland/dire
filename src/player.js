@@ -41,12 +41,12 @@ ws.handlers.set("getClass", msg => {
         <button id="hand-die">Hand the GM my die</button>
         <form id="die-scribbler">
           <span>Your die is currently:</span>
-          <label for="die-1">1:</label><input type="text" name="die-1" size="2" value="${v[0]}" />
-          <label for="die-2">2:</label><input type="text" name="die-2" size="2" value="${v[1]}" />
-          <label for="die-3">3:</label><input type="text" name="die-3" size="2" value="${v[2]}" />
-          <label for="die-4">4:</label><input type="text" name="die-4" size="2" value="${v[3]}" />
-          <label for="die-5">5:</label><input type="text" name="die-5" size="2" value="${v[4]}" />
-          <label for="die-6">6:</label><input type="text" name="die-6" size="2" value="${v[5]}" />
+          <label for="die-1">1:</label><input type="text" name="die-1" size="2" value="${v[0] || ''}" />
+          <label for="die-2">2:</label><input type="text" name="die-2" size="2" value="${v[1] || ''}" />
+          <label for="die-3">3:</label><input type="text" name="die-3" size="2" value="${v[2] || ''}" />
+          <label for="die-4">4:</label><input type="text" name="die-4" size="2" value="${v[3] || ''}" />
+          <label for="die-5">5:</label><input type="text" name="die-5" size="2" value="${v[4] || ''}" />
+          <label for="die-6">6:</label><input type="text" name="die-6" size="2" value="${v[5] || ''}" />
           <input type="submit" value="Scribble" />
         </form>
       `;
@@ -57,7 +57,7 @@ ws.handlers.set("getClass", msg => {
         event.preventDefault();
         let values = [];
         for (let i = 1; i <= 6; i++) {
-          values.push(controls.querySelector(`[name="die-${i}"]`).value);
+          values.push(controls.querySelector(`[name="die-${i}"]`).value.trim() || null);
         }
         ws.send(JSON.stringify({
           action: "scribble",

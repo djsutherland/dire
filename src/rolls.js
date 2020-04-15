@@ -107,12 +107,12 @@ export function showRolls(response) {
   for (let i = 0; i < response.rolls.length; i++) {
     let roll = response.rolls[i];
     let child = document.createElement('span');
+    child.classList.add("roll");
     child.dataset.kind = roll.kind;
+    child.dataset.status = roll.status;
     child.setAttribute("title", roll.roll);
-    child.innerHTML = `d${roll.sides}: <b>${roll.display || roll.roll}</b>`;
-    if (roll.success) {
-      child.classList.add("success");
-    }
+    child.innerHTML = `<span class="label">d${roll.sides}:</span>
+                       <span class="value">${roll.display || roll.roll}</span>`;
     bodynode.appendChild(child);
   }
 }

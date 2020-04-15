@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const express = require('express');
 const fs = require('fs');
+const graphemeSplitter = new require('grapheme-splitter')();
 const http = require('http');
 const https = require('https');
 const level = require('level');
@@ -13,7 +14,7 @@ const gameData = require('./src/game-data');
 sidesByKind = gameData.sidesByKind;
 classNames = gameData.classNames;
 
-let siteName = 'DIRE: the DIE Internet Rolling Engine';
+const siteName = 'DIRE: the DIE Internet Rolling Engine';
 
 
 class DefaultMap extends Map {
@@ -302,7 +303,7 @@ function buildSocketServer(webserver) {
   }
 
   function getFoolDie(val) {
-    return val.foolDie || [1, 2, 3, 4, 5, 6];
+    return val.foolDie || [null, null, null, null, null, null];
   }
 
 
@@ -340,6 +341,18 @@ function buildSocketServer(webserver) {
   });
 
 
+  function getRollStatus(roll) {
+    if (roll >= 6) {
+      return "special";
+    } else if (roll >= 4) {
+      return "success";
+    } else if (roll == 1) {
+      return "fail-threat";
+    } else {
+      return "fail";
+    }
+  }
+
   handlers.set("roll", (data, source) => {
     let user = userData.get(source.username);
 
@@ -350,15 +363,24 @@ function buildSocketServer(webserver) {
       res.roll = Math.floor(Math.random() * res.sides) + 1;
 
       switch (res.kind) {
+        case "bad":
+          res.status = res.roll >= 4 ? "badness" : "nothing";
+          break;
         case "fool":
-          res.display = getFoolDie(user)[res.roll - 1];
-          res.success = Number.isInteger(res.display) ? res.roll >= 4 : true;
+          let mask = getFoolDie(user)[res.roll - 1];
+          if (mask !== null) {
+            res.display = mask;
+            res.status = "special";
+          } else {
+            res.status = getRollStatus(res.roll);
+          }
           break;
         case "dictator":
         case "knight":
+          res.status = "n/a";
           break;
         default:
-          res.success = res.roll >= 4;
+          res.status = getRollStatus(res.roll);
           break;
       }
 
@@ -409,17 +431,20 @@ function buildSocketServer(webserver) {
 
   handlers.set("scribble", checkUserClass('fool', (user, data, source) => {
     let values = getFoolDie(data).map((v, idx) => {
-      let desired = [...v][0];
+      if (v === null)
+        return null;
+      let desired = graphemeSplitter.splitGraphemes(v)[0];
       if (Number.isInteger(parseInt(desired, 10))) {
-        return idx + 1;  // tricksy tricksy
+        return null;  // tricksy tricksy
       } else {
         return desired;
       }
     });
     user.foolDie = values;
+    let valDisplay = values.map((v, i) => v === null ? i + 1 : v).join(" / ");
     sendAction(user, {
       action: 'user-status',
-      text: `${user.username} scribbled on their die: ${values.join(" / ")}.`,
+      text: `${user.username} scribbled on their die: ${valDisplay}.`,
     });
     setUserClass(user, user.class);  // sends foolDie
   }));
