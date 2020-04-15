@@ -15,7 +15,7 @@ export class WSHandler {
   constructor() {
     this.proto = `ws${window.location.protocol == "https:" ? "s" : ""}`;
     this.handlers = new Map();
-    this.handlers.set("results", showResults);
+    this.handlers.set("rolls", showRolls);
     this.handlers.set("safety", showSafety);
     this.handlers.set("chat", showChat);
     this.handlers.set("user-status", showUserStatus);
@@ -102,15 +102,14 @@ export function setupResultLine(response) {
   return node.querySelector('.body');
 }
 
-export function showResults(response) {
+export function showRolls(response) {
   let bodynode = setupResultLine(response);
-  for (let i = 0; i < response.dice.length; i++) {
+  for (let i = 0; i < response.rolls.length; i++) {
+    let roll = response.rolls[i];
     let child = document.createElement('span');
-    child.dataset.kind = response.dice[i];
-    child.innerHTML = `d${response.sides[i]}: <b>${response.rolls[i]}</b>`;
-    if (response.dice[i] !== "dictator" &&
-        response.dice[i] !== "knight" &&
-        response.rolls[i] >= 4) {
+    child.dataset.kind = roll.kind;
+    child.innerHTML = `d${roll.sides}: <b title="${roll.roll}">${roll.display || roll.roll}</b>`;
+    if (roll.success) {
       child.classList.add("success");
     }
     bodynode.appendChild(child);

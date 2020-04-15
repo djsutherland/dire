@@ -63,6 +63,10 @@ main * {
     text-align: center;
 }
 
+#class-controls > * {
+    margin: 5px auto;
+}
+
 #roller {
     width: 100%;
     overflow-x: scroll;
@@ -160,20 +164,20 @@ main * {
 }
 
 /* dice rolls */
-.result.results .body span {
+.result.rolls .body span {
     padding: 2px 10px;
     margin: 2px 10px;
     display: inline-block;
 }
-.result.results .body span[data-kind="bad"] {
+.result.rolls .body span[data-kind="bad"] {
     color: red;
 }
-.result.results .body span[data-kind="class"] {
+.result.rolls .body span[data-kind="class"] {
     color: purple;
 }
-.result.results .body span.success {
+.result.rolls .body span.success {
     background-color: #afa;
 }
-.result.results .body span.success[data-kind="bad"] {
+.result.rolls .body span.success[data-kind="bad"] {
     background-color: #ffdfdf;
 }

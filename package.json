@@ -12,9 +12,12 @@
   "browserslist": "> 0.1%, not dead",
   "dependencies": {
     "core-js": "^3.6.4",
+    "crypto-random-string": "^3.2.0",
     "express": "^4.17.1",
     "express-session": "^1.17.0",
     "https": "^1.0.0",
+    "level": "^6.0.1",
+    "level-session-store": "^2.2.0",
     "lodash": "^4.17.15",
     "minimist": "^1.2.5",
     "pug": "^2.0.4",

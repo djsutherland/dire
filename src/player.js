@@ -35,11 +35,34 @@ ws.handlers.set("getClass", msg => {
 
   switch (msg.class) {
     case "fool":
+      console.log(msg);
+      let v = msg.foolDie;
       controls.innerHTML = `
         <button id="hand-die">Hand the GM my die</button>
+        <form id="die-scribbler">
+          <span>Your die is currently:</span>
+          <label for="die-1">1:</label><input type="text" name="die-1" size="1" value="${v[0]}" />
+          <label for="die-2">2:</label><input type="text" name="die-2" size="1" value="${v[1]}" />
+          <label for="die-3">3:</label><input type="text" name="die-3" size="1" value="${v[2]}" />
+          <label for="die-4">4:</label><input type="text" name="die-4" size="1" value="${v[3]}" />
+          <label for="die-5">5:</label><input type="text" name="die-5" size="1" value="${v[4]}" />
+          <label for="die-6">6:</label><input type="text" name="die-6" size="1" value="${v[5]}" />
+          <input type="submit" value="Scribble" />
+        </form>
       `;
       controls.querySelector("#hand-die").addEventListener("click", () => {
         ws.send(JSON.stringify({action: "hand-die"}));
+      });
+      controls.querySelector("#die-scribbler").addEventListener("submit", (event) => {
+        event.preventDefault();
+        let values = [];
+        for (let i = 1; i <= 6; i++) {
+          values.push(controls.querySelector(`[name="die-${i}"]`).value);
+        }
+        ws.send(JSON.stringify({
+          action: "scribble",
+          foolDie: values,
+        }));
       });
       break;
 
