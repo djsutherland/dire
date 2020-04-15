@@ -2,8 +2,8 @@ import ready from './ready';
 import escape from 'lodash/escape'; 
 export {sidesByKind, classNames} from './game-data';
 
-export function nickname() {
-  return document.getElementById('metadata').dataset.nickname;
+export function username() {
+  return document.getElementById('metadata').dataset.username;
 }
 export function role() {
   return document.getElementById('metadata').dataset.role;
@@ -18,6 +18,8 @@ export class WSHandler {
     this.handlers.set("results", showResults);
     this.handlers.set("safety", showSafety);
     this.handlers.set("chat", showChat);
+    this.handlers.set("kick", getKicked);
+    this.wasKicked = false;
   }
 
   connect() {
@@ -36,21 +38,23 @@ export class WSHandler {
     let err = document.getElementById('error');
     err.style.display = 'none';
     err.innerHTML = "";
-    ws.send(JSON.stringify({action: `hello`, role: role(), nickname: nickname()}));
+    ws.send(JSON.stringify({action: `hello`, role: role(), username: username()}));
   }
 
   onclose(event) {
-    let err = document.getElementById('error');
-    err.style.display = 'flex';
-    err.innerHTML = "Disconnected from server! Trying to reconnect&hellip;but reloading the page might help too.";
-    this.connect();
+    if (!this.wasKicked) {
+      let err = document.getElementById('error');
+      err.style.display = 'flex';
+      err.innerHTML = "Disconnected from server! Trying to reconnect&hellip;but reloading the page might help too.";
+      this.connect();
+    }
   }
 
   onmessage(event) {
     let data = JSON.parse(event.data);
     for (var msg of data) {
       if (this.handlers.has(msg.action)) {
-        this.handlers.get(msg.action)(msg);
+        this.handlers.get(msg.action)(msg, this);
       } else {
         console.error(`Unknown action:`, msg);
       }
@@ -83,7 +87,7 @@ export function setupResultLine(response) {
   node.innerHTML = `
     <div class="meta">
       <div class="name ${response.role}">
-        ${response.nickname}
+        ${response.username}
         ${response.role !== 'player' ? "<span class='role'>(" + response.role + ")</span>" : ""}
       </div>
       <div class="time">${time.toLocaleTimeString()}</div>
@@ -124,6 +128,15 @@ export function showSafety(response) {
 export function showChat(response) {
   let bodynode = setupResultLine(response);
   bodynode.innerHTML = escape(response.text);
+}
+
+export function getKicked(msg, ws) {
+  ws.wasKicked = true;  // prevent reconnection
+  let error = document.getElementById("error");
+  error.innerHTML = `<span>${msg.reason}<br><a href="/">Go home</a></span>`;
+  error.style.display = "flex";
+  document.getElementById("the-content").innerHTML = "";
+  // window.location.href = `/?msg=${encodeURIComponent(msg.reason)}`;
 }
 
 

@@ -1,56 +1,55 @@
 extends layout
 
 block content
-  #metadata(data-nickname=nickname, data-role=role)
+  #metadata(data-username=username, data-role=role)
 
   #error
 
-  block notify-button
-    #notify-alert
-      p
-        | I'd like permission to notify you when someone uses a safety tool:
-        = ' '
-        button#enable-notifications Enable notifications
-        br
-        | (Or: press the button and deny permissions to make this go away.)
+  #the-content
+    block notify-button
+      #notify-alert
+        p
+          | I'd like permission to notify you when someone uses a safety tool:
+          = ' '
+          button#enable-notifications Enable notifications
+          br
+          | (Or: press the button and deny permissions to make this go away.)
 
-  block above-roller
+    block above-roller
 
-  #roller
-    #dice
-      block my-dice
-      #base-dice
-        block base-dice
-          for i in [1, 2, 3, 4, 5, 6]
-            img(data-kind="d6", src="/img/d6.png")
-          img(id="bad-die", data-kind="bad", src="/img/bad.png")
-    #controls
-      button#fewer-d6 Fewer d6es
-      button#roll Roll!
-      button#more-d6 More d6es
+    #roller
+      #dice
+        block my-dice
+        #base-dice
+          block base-dice
+            for i in [1, 2, 3, 4, 5, 6]
+              img(data-kind="d6", src="/img/d6.png")
+            img(id="bad-die", data-kind="bad", src="/img/bad.png")
+      #controls
+        button#fewer-d6 Fewer d6es
+        button#roll Roll!
+        button#more-d6 More d6es
 
-  #safety
-    label
-      a(href="https://briebeau.com/thoughty/script-change/") Safety tools:
-    select#safety-anon(name="anon")
-      option(value="anon", selected="selected") Anonymously
-      option(value="notanon") As &ldquo;#{nickname}&rdquo;
-    input#safety-text(type="text", name="text", placeholder="Optional: say why / how to fix?", size=30)
-    .buttons
-      button(name='x-card') ❌ Card
-      button(name='rewind') ⏪ Rewind
-      button(name='pause') ⏸️ Pause
-      button(name='slow') ⚠️ Slow
-      button(name='fast-forward') ⏩️ Fast-forward
+    #safety
+      label
+        a(href="https://briebeau.com/thoughty/script-change/") Safety tools:
+      select#safety-anon(name="anon")
+        option(value="anon", selected="selected") Anonymously
+        option(value="notanon") As &ldquo;#{username}&rdquo;
+      input#safety-text(type="text", name="text", placeholder="Optional: say why / how to fix?", size=30)
+      .buttons
+        button(name='x-card') ❌ Card
+        button(name='rewind') ⏪ Rewind
+        button(name='pause') ⏸️ Pause
+        button(name='slow') ⚠️ Slow
+        button(name='fast-forward') ⏩️ Fast-forward
 
-  #chat
-    form#chat-form
-      label(for="chatbox") Chat message:
-      input#chatbox(type="text", name="text", placeholder="Hey everyone!")
-      input(type="submit", value="Send")
+    #chat
+      form#chat-form
+        label(for="chatbox") Chat message:
+        input#chatbox(type="text", name="text", placeholder="Hey everyone!")
+        input(type="submit", value="Send")
 
+    #rolls
 
-
-  #rolls
-
-  block after-roller
+    block after-roller

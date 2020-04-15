@@ -19,6 +19,16 @@ body {
     color: #b23;
 }
 
+.msg {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #e55;
+    color: black;
+    padding: 10px;
+}
+
 #metadata, #diceselector {
     display: none;
 }

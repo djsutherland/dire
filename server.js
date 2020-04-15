@@ -1,8 +1,10 @@
+const _ = require('lodash');
 const express = require('express');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const minimist = require('minimist');
+const session = require('express-session');
 const WebSocket = require('ws');
 
 const gameData = require('./src/game-data');
@@ -11,49 +13,126 @@ classNames = gameData.classNames;
 
 
 let args = minimist(process.argv, {
-  'default': {port: 5000, debug: false},
+  'default': {port: 5000, debug: false, session_secret: "don't die"},
   'boolean': ['debug'],
   'alias': {p: 'port'}
 });
 
+
+class DefaultMap extends Map {
+  constructor(getDefault, ...args) {
+    super(...args);
+    this.default = getDefault;
+  }
+
+  get(key) {
+    if (!this.has(key)) {
+      this.set(key, this.default(key));
+    }
+    return super.get(key);
+  }
+}
+
+// server data
+let userData = new DefaultMap(username => { return {username: username}; });
+let playerClasses = new Map();
+let actionsLog = [];
 
 ////////////////////////////////////////////////////////////////////////////////
 // The Express app to specify the HTML server bit; pretty standard.
 
 const app = express();
 app.set('view engine', 'pug');
+app.set('query parser', 'extended');
 app.use(express.urlencoded({extended: false}));
+let sessionParser = session({
+  secret: args.session_secret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {},
+});
+app.use(sessionParser);
 
 app.use(express.static(__dirname + '/public'));
 
 app.get('/', (req, res) => {
+  if (req.query.msg) {
+    req.session.msg = req.query.msg;
+    res.redirect('/');
+    return;
+  }
+
+  let msg = req.session.msg;
+  delete req.session.msg;
+
   res.render('index', {
-    title: 'Dicer: Dice for DIE'
+    title: 'Dicer: Dice for DIE',
+    msg: msg,
   });
 });
 
 app.post('/login/', (req, res) => {
-  var nick = req.body.nickname;
-  res.redirect(`/play/${nick}/`);
+  let username = req.body.username.trim();
+  if (!username) {
+    req.session.msg = "Please pick a better name than that.";
+    res.redirect('/');
+    return;
+  }
+
+  let conn = userData.get(username).connection;
+  if (conn && conn.readyState === WebSocket.OPEN) {
+    req.session.msg = `There's already a "${username}"; choose another name.`;
+    res.redirect('/');
+    return;
+  }
+
+  req.session.username = username;
+  if (req.body.join_player) {
+    res.redirect('/play/');
+  } else {
+    res.redirect('/GM/');
+  }
 });
 
-app.get('/play/:nickname/', (req, res) => {
+
+function loginRequired(fn) {
+  return (req, res) => {
+    let username = req.session.username;
+    if (!username) {
+      req.session.msg = "Log in first.";
+      res.redirect('/');
+      return;
+    }
+
+    let conn = userData.get(username).connection;
+    if (conn && conn.readyState === WebSocket.OPEN) {
+      conn.send(JSON.stringify([{
+        action: 'kick',
+        reason: 'Someone else connected with the same username.',
+      }]));
+    }
+
+    fn(req, res);
+  };
+}
+
+app.get('/play/', loginRequired((req, res) => {
   res.render('player', {
     title: 'Dicer: Dice for DIE &ndash; Player View',
-    nickname: req.params.nickname,
+    username: req.session.username,
     role: 'player'
   });
-});
+}));
 
-app.get('/GM/:nickname/', (req, res) => {
+app.get('/GM/', loginRequired((req, res) => {
   res.render('gm', {
     title: 'Dicer: Dice for DIE &ndash; GM View',
-    nickname: req.params.nickname,
+    username: req.session.username,
     role: 'GM',
     classNames: classNames,
     sidesByKind: sidesByKind
   });
-});
+}));
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -79,6 +158,28 @@ if (args.ssl_key) {
 
 const socketserver = new WebSocket.Server({server: webserver});
 
+
+// helpers to iterate over active connections
+
+socketserver.activeClients = function*() {
+  for (let client of this.clients)
+    if (client.readyState === WebSocket.OPEN)
+      yield client;
+};
+
+socketserver.activePlayers = function*() {
+  for (let client of this.activeClients())
+    if (userData.get(client.username).role === "player")
+      yield client;
+};
+
+socketserver.activeGMs = function*() {
+  for (let client of this.activeClients())
+    if (userData.get(client.username).role === "GM")
+      yield client;
+};
+
+
 // keep-alive stuff, basically from the ws readme
 function noop() {}
 function heartbeat() { this.isAlive = true; }
@@ -103,37 +204,35 @@ socketserver.on('close', () => { clearInterval(interval); });
 
 
 // the core of the server
-let actionsLog = [];
-let playerClasses = new Map();
 
 let handlers = new Map();
 
+
 handlers.set("hello", (data, source) => {
-  source.nickname = data.nickname;
-  source.role = data.role;
+  source.username = data.username;
+  let user = userData.get(source.username);
+  user.role = data.role;
+  user.connection = source;
 
-  if (source.role === 'player') {
-    let cls = playerClasses.get(source.nickname);
-    source.send(JSON.stringify([{
-      action: 'getClass',
-      class: cls || "none",
-      className: classNames[cls]
-    }]));
+  if (user.role === "player") {
+    source.send(JSON.stringify([{action: 'getClass', class: user.class || "none"}]));
   }
-
   source.send(JSON.stringify(actionsLog));
-  tellAboutClients();
+  tellAboutUsers();
 });
 
+
 handlers.set("roll", (data, source) => {
+  let user = userData.get(source.username);
+
   let dice = data.dice || [];
-  let sides = dice.map(
-    d => sidesByKind[d === "class" ? playerClasses.get(source.nickname) : d]);
+  let sides = dice.map(d => sidesByKind[d === "class" ? user.class : d]);
   let rolls = sides.map(s => Math.floor(Math.random() * s) + 1);
-  var result = {
+
+  let result = {
     action: "results",
-    nickname: source.nickname,
-    role: source.role,
+    username: user.username,
+    role: user.role,
     dice: dice,
     rolls: rolls,
     sides: sides,
@@ -141,119 +240,109 @@ handlers.set("roll", (data, source) => {
   };
   actionsLog.push(result);
   let response = JSON.stringify([result]);
-  for (let client of socketserver.clients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(response);
-    }
+  for (let client of socketserver.activeClients()) {
+    client.send(response);
   }
 });
 
+
 handlers.set("safety", (data, source) => {
+  let user = userData.get(source.username);
   let is_anon = data.anon == "anon";
   let result = {
     action: "safety",
-    nickname: is_anon ? "Anonymous" : source.nickname,
-    role: is_anon ? "player" : source.role,
+    username: is_anon ? "Anonymous" : user.username,
+    role: is_anon ? "player" : user.role,
     text: data.text,
     choice: data.choice,
     time: Date.now()
   };
   actionsLog.push(result);
   let response = JSON.stringify([Object.assign({live: true}, result)]);
-  for (let client of socketserver.clients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(response);
-    }
+  for (let client of socketserver.activeClients()) {
+    client.send(response);
   }
 });
 
+
 handlers.set("chat", (data, source) => {
+  let user = userData.get(source.username);
   let result = {
     action: "chat",
-    nickname: source.nickname,
-    role: source.role,
+    username: user.username,
+    role: user.role,
     text: data.text,
     time: Date.now()
   };
   actionsLog.push(result);
   let response = JSON.stringify([result]);
-  for (let client of socketserver.clients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(response);
-    }
+  for (let client of socketserver.activeClients()) {
+    client.send(response);
   }
 });
-
 
 
 handlers.set("setClass", (data, source) => {
-  if (source.role != "GM") {
-    console.error(`Attempt to set class by ${source.nickname} (${source.role}):`, data);
+  let doer = userData.get(source.username);
+  if (doer.role != "GM") {
+    console.error(`Attempt to set class by ${doer.username} (${doer.role}):`, data);
     return;
   }
-  playerClasses.set(data.nickname, data.class);
-  tellAboutClients();
 
-  let msg = JSON.stringify([{action: "getClass", class: data.class}]);
-  for (let client of socketserver.clients) {
-    if (client.nickname == data.nickname && client.role == "player" &&
-        client.readyState === WebSocket.OPEN) {
-      client.send(msg);
-    }
+  let target = userData.get(data.username);
+  target.class = data.class;
+  let conn = target.connection;
+  if (conn && conn.readyState === WebSocket.OPEN) {
+    conn.send(JSON.stringify([{action: "getClass", class: target.class}]));
+  }
+
+  tellAboutUsers();
+});
+
+
+handlers.set("kick", (data, source) => {
+  let doer = userData.get(source.username);
+  if (doer.role != "GM") {
+    console.error(`Attempt to kick by ${doer.username} (${doer.role}):`, data);
+    return;
+  }
+  let target = userData.get(data.username);
+  if (target.connection && target.connection.readyState === WebSocket.OPEN) {
+    target.connection.send(JSON.stringify([{action: "kick", reason: "Kicked by GM."}]));
+    target.connection.close();
   }
 });
 
 
-function getUserData() {
-  let users = {};
-  for (let [nickname, cls] of playerClasses) {
-    users[nickname] = {
-      nickname: nickname,
-      role: "player",
-      conns: 0,
-      class: cls
-    };
+handlers.set("delete", (data, source) => {
+  let doer = userData.get(source.username);
+  if (doer.role != "GM") {
+    console.error(`Attempt to delete by ${doer.username} (${doer.role}):`, data);
+    return;
   }
+  userData.delete(data.username);
+  tellAboutUsers();
+});
 
-  for (let client of socketserver.clients) {
-    let key = client.nickname + (client.role !== 'player' ? ` (${client.role})` : '');
-    if (!(key in users)) {
-      users[key] = {
-        nickname: client.nickname,
-        role: client.role,
-        conns: 0,
-        class: client.role === "GM" ? "master" : "none"
-      };
-    }
-    if (client.readyState === WebSocket.OPEN) {
-      users[key].conns++;
+
+function tellAboutUsers() {
+  // there's no Map.map, even in lodash. :/
+  let userInfo = [];
+  for (let user of userData.values()) {
+    if (user.username) {
+      userInfo.push({
+        username: user.username,
+        role: user.role,
+        connected: user.connection && user.connection.readyState === WebSocket.OPEN,
+        class: user.role === "GM" ? "master" : (user.class || "none"),
+      });
     }
   }
-  return Object.values(users).sort((a, b) => {
-    if (a.role == "GM" && b.role == "player") {
-      return -1;
-    } else if (a.role == "player" && b.role == "GM") {
-      return 1;
-    }
-    let aName = (a.nickname || "-").toLowerCase(),
-        bName = (b.nickname || "-").toLowerCase();
-    if (aName < bName) {
-      return -1;
-    } else if (aName > bName) {
-      return 1;
-    } else {
-      return 0;
-    }
-  });
-}
+  userInfo = _.sortBy(userInfo, ['role', 'username']);
 
-function tellAboutClients() {
-  let userData = getUserData();
-  let msg = JSON.stringify([{action: "users", users: userData}]);
-  for (let client of socketserver.clients) {
-    if (client.readyState === WebSocket.OPEN && client.role == "GM") {
-      client.send(msg);
-    }
+  let msg = JSON.stringify([{action: "users", users: userInfo}]);
+  for (let client of socketserver.activeGMs()) {
+    client.send(msg);
   }
 }
 
@@ -272,14 +361,17 @@ socketserver.on('connection', ws => {
     }
   });
   ws.on('close', e => {
-    tellAboutClients();
+    if (ws.username) {
+      delete userData.get(ws.username).connection;
+    }
+    tellAboutUsers();
   });
   ws.on('error', e => {
     switch (e.code) {
       case "ECONNRESET":
         break;
       default:
-        console.error(`client ${ws.nickname || "[unknown]"} error: `, e);
+        console.error(`client ${ws.username || "[unknown]"} error: `, e);
         break;
     }
   });

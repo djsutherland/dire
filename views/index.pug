@@ -3,12 +3,13 @@ extends layout
 block content
   form.join(action="/login/", method="POST")
     p
-      label(for="nickname") Who are you?
-      input#nickname(type="text",
-                     name="nickname",
+      label(for="username") Who are you?
+      input#username(type="text",
+                     name="username",
                      placeholder="t3h PeNgU1N oF d00m",
-                     size="20")
-      input(type="submit", value="Join")
+                     size="25")
+      input(type="submit", name="join_player", value="Play")
+      input(type="submit", name="join_gm", value="GM")
 
   div(style="display: flex; align-items: center;")
       img(style="width: 25%; min-width: 200px; max-width: 662px;",

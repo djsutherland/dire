@@ -10,6 +10,11 @@ html
       header.header
         noscript: h1 You need JavaScript enabled to use this page. &nbsp;
         h1 !{title}
+
+    if msg
+      .msg
+        =msg
+
     main
       block content
     block script
