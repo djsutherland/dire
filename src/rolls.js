@@ -107,6 +107,11 @@ export function showResults(response) {
     let child = document.createElement('span');
     child.dataset.kind = response.dice[i];
     child.innerHTML = `d${response.sides[i]}: <b>${response.rolls[i]}</b>`;
+    if (response.dice[i] !== "dictator" &&
+        response.dice[i] !== "knight" &&
+        response.rolls[i] >= 4) {
+      child.classList.add("success");
+    }
     bodynode.appendChild(child);
   }
 }
