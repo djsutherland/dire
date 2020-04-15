@@ -18,6 +18,7 @@ export class WSHandler {
     this.handlers.set("results", showResults);
     this.handlers.set("safety", showSafety);
     this.handlers.set("chat", showChat);
+    this.handlers.set("user-status", showUserStatus);
     this.handlers.set("kick", getKicked);
     this.wasKicked = false;
   }
@@ -131,6 +132,11 @@ export function showSafety(response) {
 }
 
 export function showChat(response) {
+  let bodynode = setupResultLine(response);
+  bodynode.innerHTML = escape(response.text);
+}
+
+export function showUserStatus(response) {
   let bodynode = setupResultLine(response);
   bodynode.innerHTML = escape(response.text);
 }

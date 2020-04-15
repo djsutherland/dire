@@ -202,11 +202,52 @@ const interval = setInterval(() => {
 
 socketserver.on('close', () => { clearInterval(interval); });
 
+// Some helpers
+
+function sendAction(user, result) {
+  let act = Object.assign({
+    username: user.username,
+    role: user.role,
+    time: Date.now(),
+  }, result);
+
+  actionsLog.push(act);
+  let response = JSON.stringify([act]);
+  for (let client of socketserver.activeClients()) {
+    client.send(response);
+  }
+}
+
+function setUserClass(user, cls) {
+  user.class = cls;
+  let conn = user.connection;
+  if (conn && conn.readyState === WebSocket.OPEN) {
+    conn.send(JSON.stringify([{action: "getClass", class: user.class}]));
+  }
+  tellAboutUsers();
+}
+
+
+
+function checkUserAttr(attrname, attrval, fn) {
+  return (data, source) => {
+    let user = userData.get(source.username);
+    if (user[attrname] !== attrval) {
+      console.error(
+        `Bad attempt by ${user.username} (${attrname} = ${user[attrname]}, expected ${attrval}):`,
+        data);
+      return;
+    }
+    fn(user, data, source);
+  };
+}
+checkUserClass = (cls, fn) => checkUserAttr("class", cls, fn);
+checkUserIsGM = fn => checkUserAttr("role", "GM", fn);
+
 
 // the core of the server
 
 let handlers = new Map();
-
 
 handlers.set("hello", (data, source) => {
   source.username = data.username;
@@ -229,75 +270,44 @@ handlers.set("roll", (data, source) => {
   let sides = dice.map(d => sidesByKind[d === "class" ? user.class : d]);
   let rolls = sides.map(s => Math.floor(Math.random() * s) + 1);
 
-  let result = {
-    action: "results",
-    username: user.username,
-    role: user.role,
-    dice: dice,
-    rolls: rolls,
-    sides: sides,
-    time: Date.now()
-  };
-  actionsLog.push(result);
-  let response = JSON.stringify([result]);
-  for (let client of socketserver.activeClients()) {
-    client.send(response);
-  }
+  sendAction(user, {action: "results", dice: dice, rolls: rolls, sides: sides});
 });
 
 
 handlers.set("safety", (data, source) => {
   let user = userData.get(source.username);
   let is_anon = data.anon == "anon";
-  let result = {
-    action: "safety",
-    username: is_anon ? "Anonymous" : user.username,
-    role: is_anon ? "player" : user.role,
-    text: data.text,
-    choice: data.choice,
-    time: Date.now()
-  };
-  actionsLog.push(result);
-  let response = JSON.stringify([Object.assign({live: true}, result)]);
-  for (let client of socketserver.activeClients()) {
-    client.send(response);
-  }
+  sendAction(
+    is_anon ? {username: "Anonymous", role: "player"} : user,
+    {action: "safety", text: data.text, choice: data.choice}
+  );
 });
 
 
 handlers.set("chat", (data, source) => {
-  let user = userData.get(source.username);
-  let result = {
-    action: "chat",
-    username: user.username,
-    role: user.role,
-    text: data.text,
-    time: Date.now()
-  };
-  actionsLog.push(result);
-  let response = JSON.stringify([result]);
-  for (let client of socketserver.activeClients()) {
-    client.send(response);
-  }
+  sendAction(userData.get(source.username), {action: "chat", text: data.text});
 });
 
 
-handlers.set("setClass", (data, source) => {
-  let doer = userData.get(source.username);
-  if (doer.role != "GM") {
-    console.error(`Attempt to set class by ${doer.username} (${doer.role}):`, data);
-    return;
-  }
+handlers.set("setClass", checkUserIsGM((doer, data, source) => {
+  setUserClass(userData.get(data.username), data.class);
+}));
 
-  let target = userData.get(data.username);
-  target.class = data.class;
-  let conn = target.connection;
-  if (conn && conn.readyState === WebSocket.OPEN) {
-    conn.send(JSON.stringify([{action: "getClass", class: target.class}]));
-  }
+handlers.set("hand-die", checkUserClass('fool', (user, data, source) => {
+  sendAction(user, {
+    action: 'user-status',
+    text: `${user.username} handed their die to the GM.`,
+  });
+  setUserClass(user, "fool_nodie");
+}));
 
-  tellAboutUsers();
-});
+handlers.set("take-die", checkUserClass('fool_nodie', (user, data, source) => {
+  sendAction(user, {
+    action: 'user-status',
+    text: `${user.username} took their die back from the GM.`,
+  });
+  setUserClass(user, "fool");
+}));
 
 
 handlers.set("kick", (data, source) => {

@@ -155,6 +155,9 @@ main * {
 .result.chat {
     background-color: #ffd;
 }
+.result.user-status {
+    background-color: #ffc266;
+}
 
 /* dice rolls */
 .result.results .body span {

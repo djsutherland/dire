@@ -3,7 +3,8 @@ import ready from './ready';
 import {ws, sidesByKind, classNames, selectedToggler} from './rolls';
 
 ws.handlers.set("getClass", msg => {
-  let classId = document.getElementById("class-id");
+  let classId = document.getElementById("class-id"),
+      controls = document.getElementById("class-controls");
 
   if (!sidesByKind[msg.class]) {
     document.querySelectorAll("#my-dice").forEach(d => d.remove());
@@ -15,10 +16,8 @@ ws.handlers.set("getClass", msg => {
   } else {
     // get or create #my-die, inside #my-dice, inside #dice
     let die = document.getElementById('my-die');
-    console.log("#my-die", die);
     if (!die) {
       let div = document.getElementById("my-dice");
-      console.log("#my-dice", dice);
       if (!div) {
         div = document.createElement('div');
         div.setAttribute('id', 'my-dice');
@@ -29,11 +28,32 @@ ws.handlers.set("getClass", msg => {
       die.dataset.kind = "class";
       die.addEventListener("click", selectedToggler(die));
       div.prepend(die);
-      console.log("#my-die created", die);
     }
-    console.log("setting on #my-die");
     die.setAttribute("src", `/img/${msg.class}.png`);
     classId.innerHTML = ` You're ${classNames[msg.class]}.`;
-    console.log("done");
+  }
+
+  switch (msg.class) {
+    case "fool":
+      controls.innerHTML = `
+        <button id="hand-die">Hand the GM my die</button>
+      `;
+      controls.querySelector("#hand-die").addEventListener("click", () => {
+        ws.send(JSON.stringify({action: "hand-die"}));
+      });
+      break;
+
+    case "fool_nodie":
+      controls.innerHTML = `
+        <button id="take-die">Take die back from the GM</button>
+      `;
+      controls.querySelector("#take-die").addEventListener("click", () => {
+        ws.send(JSON.stringify({action: "take-die"}));
+      });
+      break;
+
+    default:
+      controls.innerHTML = "";
+      break;
   }
 });
