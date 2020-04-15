@@ -60,3 +60,13 @@ ws.handlers.set("users", msg => {
     for (let a of tbody.querySelectorAll(".deleter"))
         a.addEventListener("click", sendDelete);
 });
+
+ws.handlers.set("allowMultipleGMs", msg => {
+    document.getElementById('allowMultipleGMs').checked = msg.value;
+});
+ready(() => {
+    let checkbox = document.getElementById('allowMultipleGMs');
+    checkbox.addEventListener('change', () => {
+        ws.send(JSON.stringify({action: 'allowMultipleGMs', value: checkbox.checked}));
+    });
+});

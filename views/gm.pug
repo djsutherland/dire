@@ -1,6 +1,9 @@
 extends roller
 
 block above-roller
+  form
+    input#allowMultipleGMs(type="checkbox", name="allowMultipleGMs", checked=allowMultipleGMs)
+    label(for="allowMultipleGMs") Allow other GMs to join
   table#clients
     thead
       tr

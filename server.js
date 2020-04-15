@@ -29,6 +29,7 @@ class DefaultMap extends Map {
 }
 
 // server global data
+let settings = {allowMultipleGMs: true};
 let userData = new DefaultMap(username => { return {username: username}; });
 let actionsLog = [];
 
@@ -116,9 +117,32 @@ function buildExpressApp(sessionParser) {
     if (req.body.join_player) {
       res.redirect('/play/');
     } else {
+      if (!settings.allowMultipleGMs) {
+        let active = getActiveGMs();
+        if (active.length) {
+            req.session.msg = `There's already a GM (${active[0].username}),
+              and they're not allowing other GMs right now.`;
+            res.redirect('/');
+            return;
+        }
+      }
       res.redirect('/GM/');
     }
   });
+
+  function getActiveGMs(not) {
+    let res = [];
+    for (let [key, user] of userData) {
+      if (key == not) {
+        continue;
+      }
+      if (user.role === "GM" && user.connection &&
+          user.connection.readyState === WebSocket.OPEN) {
+        res.push(user);
+      }
+    }
+    return res;
+  }
 
   function loginRequired(fn) {
     return (req, res) => {
@@ -150,12 +174,23 @@ function buildExpressApp(sessionParser) {
   }));
 
   app.get('/GM/', loginRequired((req, res) => {
+    if (!settings.allowMultipleGMs) {
+      let others = getActiveGMs(req.session.username);
+      if (others.length > 0) {
+        req.session.msg = `There's already a GM (${others[0].username}),
+          and they're not allowing other GMs right now.`;
+        res.redirect('/');
+        return;
+      }
+    }
+
     res.render('gm', {
       title: 'Dicer: Dice for DIE &ndash; GM View',
       username: req.session.username,
       role: 'GM',
       classNames: classNames,
-      sidesByKind: sidesByKind
+      sidesByKind: sidesByKind,
+      allowMultipleGMs: settings.allowMultipleGMs,
     });
   }));
 
@@ -416,11 +451,20 @@ function buildSocketServer(webserver) {
   });
 
 
+  handlers.set("allowMultipleGMs", checkUserIsGM((user, data, source) => {
+    settings.allowMultipleGMs = data.value;
+    let msg = JSON.stringify([{action: 'allowMultipleGMs', value: data.value}]);
+    for (let client of socketserver.activeGMs()) {
+      client.send(msg);
+    }
+  }));
+
+
   function tellAboutUsers() {
     // there's no Map.map, even in lodash. :/
     let userInfo = [];
     for (let user of userData.values()) {
-      if (user.username) {
+      if (user.role) {
         userInfo.push({
           username: user.username,
           role: user.role,
@@ -452,9 +496,6 @@ function buildSocketServer(webserver) {
       }
     });
     ws.on('close', e => {
-      if (ws.username) {
-        delete userData.get(ws.username).connection;
-      }
       tellAboutUsers();
     });
     ws.on('error', e => {
