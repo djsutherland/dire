@@ -188,5 +188,7 @@ main * {
 
 .roll[data-status="special"] { border: 2px dashed black; }
 .roll[data-status="n/a"] { border: 1px dotted black; }
+.roll[data-status="fail-threat"] { border: 1px dotted red; }
+.roll[data-status="specially-bad"] { border: 2px solid red; }
 
 .roll[data-status="badness"] { background-color: #fcc; }

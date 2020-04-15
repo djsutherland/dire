@@ -1,4 +1,4 @@
-import ready from './ready';
+import {ready, selectorValue} from './helpers';
 import {ws, can_notify, username} from './rolls';
 
 function sendAction(event, params) {
@@ -8,14 +8,17 @@ function sendAction(event, params) {
     )));
     event.preventDefault();
 }
-
 function setClass(event) {
+    sendAction(event, {action: "set-class", class: selectorValue(event.target)});
+}
+function setFoolVariant(event) {
+    sendAction(event, {action: "fool-set-variant", foolVariant: selectorValue(event.target)});
+}
+function setFoolHasDie(event) {
     sendAction(event, {
-        action: "setClass",
-        class: event.target.options[event.target.selectedIndex].value,
+        action: event.target.checked ? "take-fool-die" : "give-fool-die",
     });
 }
-
 function sendKick(event) { sendAction(event, {action: "kick"}); }
 function sendDelete(event) { sendAction(event, {action: "delete"}); }
 
@@ -35,6 +38,7 @@ ws.handlers.set("users", msg => {
                 ${user.connected ? "" : `(disconnected)`}
             </th>
             <td class="class-picker"></td>
+            <td class="extra-actions"></td>
             <td>${is_me ?
                   "" :
                   user.connected ?
@@ -50,10 +54,29 @@ ws.handlers.set("users", msg => {
                    .setAttribute("selected", "selected");
         }
 
+        if (user.class === "fool") {
+            let extras = tr.querySelector('.extra-actions');
+            extras.innerHTML = `
+                <select name="foolVariant">
+                    <option value="1.1">1.1</option>
+                    <option value="1.2">1.2</option>
+                </select>
+                <label>
+                    GM has die:
+                    <input type="checkbox" name="has-own-die" ${user.foolDieWithGM ? "checked" : ""}>
+                </label>
+            `;
+            let sel = extras.querySelector('select[name="foolVariant"]');
+            sel.setAttribute("selected", true);
+            sel.addEventListener("change", setFoolVariant);
+
+            extras.querySelector('[name="has-own-die"]').addEventListener("change", setFoolHasDie);
+        }
+
         tbody.appendChild(tr);
     }
 
-    for (let select of tbody.querySelectorAll("select"))
+    for (let select of tbody.querySelectorAll(".class-picker select"))
         select.addEventListener("change", setClass);
     for (let a of tbody.querySelectorAll(".kicker"))
         a.addEventListener("click", sendKick);

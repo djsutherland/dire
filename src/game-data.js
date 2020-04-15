@@ -5,7 +5,6 @@ const sidesByKind = {
   bad: 6,
   fallen: 0,
   fool: 6,
-  fool_nodie: 0,
   knight: 8,
   neo: 10,
   godbinder: 12,
@@ -15,7 +14,6 @@ const sidesByKind = {
 const classNames = {
   dictator: "the Dictator",
   fool: "the Fool",
-  fool_nodie: "the Fool, but the GM has your die",
   fallen: "a Fallen",
   knight: "the Emotion Knight",
   neo: "the Neo",

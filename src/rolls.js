@@ -1,4 +1,4 @@
-import ready from './ready';
+import {ready, selectorValue} from './helpers';
 import escape from 'lodash/escape'; 
 export {sidesByKind, classNames} from './game-data';
 
@@ -147,6 +147,7 @@ export function getKicked(msg, ws) {
   error.innerHTML = `<span>${msg.reason}<br><a href="/">Go home</a></span>`;
   error.style.display = "flex";
   document.getElementById("the-content").innerHTML = "";
+  ws.close();
   // window.location.href = `/?msg=${encodeURIComponent(msg.reason)}`;
 }
 
@@ -163,8 +164,7 @@ export function selectedToggler(img) {
 
 export function safetyHitter(button) {
   return event => {
-    let sel = document.getElementById('safety-anon');
-    let anon_or_not = sel.options[sel.selectedIndex].value;
+    let anon_or_not = selectorValue(document.getElementById('safety-anon'));
 
     let textbox = document.getElementById('safety-text');
 

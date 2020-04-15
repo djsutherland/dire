@@ -1,7 +1,7 @@
 const _ = require('lodash');
 const express = require('express');
 const fs = require('fs');
-const graphemeSplitter = new require('grapheme-splitter')();
+const splitGraphemes = (new require('grapheme-splitter')()).splitGraphemes;
 const http = require('http');
 const https = require('https');
 const level = require('level');
@@ -15,6 +15,13 @@ sidesByKind = gameData.sidesByKind;
 classNames = gameData.classNames;
 
 const siteName = 'DIRE: the DIE Internet Rolling Engine';
+
+
+const args = minimist(process.argv, {
+  'default': {port: 5000, debug: false, db: './leveldb'},
+  'boolean': ['debug'],
+  'alias': {p: 'port'}
+});
 
 
 class DefaultMap extends Map {
@@ -158,10 +165,13 @@ function buildExpressApp(sessionParser) {
 
       let conn = userData.get(username).connection;
       if (conn && conn.readyState === WebSocket.OPEN) {
-        conn.send(JSON.stringify([{
+        let msg = JSON.stringify([{
           action: 'kick',
-          reason: 'Someone else connected with the same username.',
-        }]));
+          reason: 'You logged in somewhere else.',
+        }]);
+        if (args.debug)
+          console.log(`Sending ${username}:`, msg);
+        conn.send(msg);
       }
 
       fn(req, res);
@@ -204,7 +214,7 @@ function buildExpressApp(sessionParser) {
 ////////////////////////////////////////////////////////////////////////////////
 // Build the webserver object, to be used by the websocket server.
 
-function buildWebserver(args, express_app) {
+function buildWebserver(express_app) {
   if (args.ssl_key) {
     console.log("Running on https://");
     if (!args.port) { args.port = 443; }
@@ -244,6 +254,16 @@ function buildSocketServer(webserver) {
         yield client;
   };
 
+  socketserver.tellGMsOne = function(msg) {
+    if (args.debug)
+      console.log(`Broadcasting to GMs:`, msg);
+
+    let str = JSON.stringify([msg]);
+    for (let client of this.activeGMs()) {
+      client.send(str);
+    }
+  };
+
 
   // keep-alive stuff, basically from the ws readme
   function noop() {}
@@ -277,29 +297,97 @@ function buildSocketServer(webserver) {
     }, result);
 
     actionsLog.push(act);
-    let response = JSON.stringify([act]);
+
+    if (args.debug)
+      console.log(`Broadcasting action:`, act);
+
+    let msg = JSON.stringify([act]);
     for (let client of socketserver.activeClients()) {
-      client.send(response);
+      client.send(msg);
     }
   }
 
   function sendUserOne(user, msg) {
     let conn = user.connection;
     if (conn && conn.readyState === WebSocket.OPEN) {
+      if (args.debug)
+        console.log(`Sending to ${user.username}:`, msg);
+
       conn.send(JSON.stringify([msg]));
     }
   }
 
-  function setUserClass(user, cls) {
-    if (cls !== undefined) {
-      user.class = cls;
+  function tellGMsAboutUsers() {
+    // there's no Map.map, even in lodash. :/
+    let userInfo = [];
+    for (let user of userData.values()) {
+      let res = userDataForSending(user);
+      if (res) {
+        userInfo.push(res);
+      }
     }
-    let msg = {action: "getClass", class: user.class || "none"};
-    if (user.class == "fool") {
-      msg.foolDie = getFoolDie(user);
+    userInfo = _.sortBy(userInfo, ['role', 'username']);
+    socketserver.tellGMsOne({action: "users", users: userInfo});
+  }
+
+  function fillDefaults(user) {
+    if (user.class === undefined) {
+      user.class = "none";
     }
-    sendUserOne(user, msg);
-    tellAboutUsers();
+    switch (user.class) {
+      case "fool":
+        if (user.foolDieWithGM === undefined) {
+          user.foolDieWithGM = false;
+        }
+        if (user.foolVariant === undefined) {
+          user.foolVariant = "1.1";
+        }
+        if (user.foolDie === undefined) {
+          if (user.foolVariant == "1.1") {
+            user.foolDie = {
+              symbol: "?",
+              side: 1,
+            };
+          } else {
+            if (user.foolVariant != "1.2") {
+              if (user.foolVariant) {
+                console.error(`Unknown fool variant ${user.foolVariant}; assuming 1.2`);
+              }
+              user.foolVariant = "1.2";
+            }
+            user.foolDie = {
+              posSymbol: "👍",
+              negSymbol: "👎",
+              sides: [".", ".", ".", ".", ".", "."],
+            };
+          }
+        }
+        break;
+    }
+  }
+
+  function userDataForSending(user) {
+    if (!user.role) return null;
+    fillDefaults(user);
+    let res = {
+      username: user.username,
+      role: user.role,
+      connected: user.connection && user.connection.readyState === WebSocket.OPEN,
+      class: user.class,
+    };
+    switch (user.class) {
+      case "fool":
+        res.foolDieWithGM = user.foolDieWithGM;
+        res.foolVariant = user.foolVariant;
+        res.foolDie = user.foolDie;
+        break;
+    }
+    return res;
+  }
+
+  function refreshUserData(user) {
+    sendUserOne(user, Object.assign({action: "getUserData"}, userDataForSending(user)));
+    tellGMsAboutUsers();
   }
 
   function getFoolDie(val) {
@@ -310,6 +398,7 @@ function buildSocketServer(webserver) {
   function checkUserAttr(attrname, attrval, fn) {
     return (data, source) => {
       let user = userData.get(source.username);
+      fillDefaults(user);
       if (user[attrname] !== attrval) {
         console.error(
           `Bad attempt by ${user.username} (${attrname} = ${user[attrname]}, expected ${attrval}):`,
@@ -334,10 +423,14 @@ function buildSocketServer(webserver) {
     user.connection = source;
 
     if (user.role === "player") {
-      setUserClass(user);
+      refreshUserData(user);
+    } else {
+      tellGMsAboutUsers();
     }
+
+    if (args.debug)
+      console.log(`Sending ${source.username} the action log (length ${actionsLog.length})`);
     source.send(JSON.stringify(actionsLog));
-    tellAboutUsers();
   });
 
 
@@ -355,6 +448,7 @@ function buildSocketServer(webserver) {
 
   handlers.set("roll", (data, source) => {
     let user = userData.get(source.username);
+    fillDefaults(user);
 
     let rolls = (data.dice || []).map(d => {
       let res = {};
@@ -367,13 +461,7 @@ function buildSocketServer(webserver) {
           res.status = res.roll >= 4 ? "badness" : "nothing";
           break;
         case "fool":
-          let mask = getFoolDie(user)[res.roll - 1];
-          if (mask !== null) {
-            res.display = mask;
-            res.status = "special";
-          } else {
-            res.status = getRollStatus(res.roll);
-          }
+          [res.display, res.status] = getFoolDisplay(user, res.roll);
           break;
         case "dictator":
         case "knight":
@@ -409,67 +497,117 @@ function buildSocketServer(webserver) {
   });
 
 
-  handlers.set("setClass", checkUserIsGM((doer, data, source) => {
-    setUserClass(userData.get(data.username), data.class);
-  }));
-
-  handlers.set("hand-die", checkUserClass('fool', (user, data, source) => {
-    sendAction(user, {
-      action: 'user-status',
-      text: `${user.username} handed their die to the GM.`,
-    });
-    setUserClass(user, "fool_nodie");
-  }));
-
-  handlers.set("take-die", checkUserClass('fool_nodie', (user, data, source) => {
-    sendAction(user, {
-      action: 'user-status',
-      text: `${user.username} took their die back from the GM.`,
-    });
-    setUserClass(user, "fool");
-  }));
-
-  handlers.set("scribble", checkUserClass('fool', (user, data, source) => {
-    let values = getFoolDie(data).map((v, idx) => {
-      if (v === null)
-        return null;
-      let desired = graphemeSplitter.splitGraphemes(v)[0];
-      if (Number.isInteger(parseInt(desired, 10))) {
-        return null;  // tricksy tricksy
-      } else {
-        return desired;
-      }
-    });
-    user.foolDie = values;
-    let valDisplay = values.map((v, i) => v === null ? i + 1 : v).join(" / ");
-    sendAction(user, {
-      action: 'user-status',
-      text: `${user.username} scribbled on their die: ${valDisplay}.`,
-    });
-    setUserClass(user, user.class);  // sends foolDie
-  }));
-
-
-  handlers.set("kick", (data, source) => {
-    let doer = userData.get(source.username);
-    if (doer.role != "GM") {
-      console.error(`Attempt to kick by ${doer.username} (${doer.role}):`, data);
-      return;
-    }
+  handlers.set("set-class", checkUserIsGM((doer, data, source) => {
     let target = userData.get(data.username);
-    if (target.connection && target.connection.readyState === WebSocket.OPEN) {
-      target.connection.send(JSON.stringify([{action: "kick", reason: "Kicked by GM."}]));
-      target.connection.close();
+    target.class = data.class;
+    refreshUserData(target);
+  }));
+
+  handlers.set("fool-set-variant", checkUserIsGM((doer, data, source) => {
+    let target = userData.get(data.username);
+    if (target.foolVariant != data.foolVariant) {
+      target.foolVariant = data.foolVariant;
+      delete target.foolDie;  // different format...
+      refreshUserData(target);
     }
-  });
+  }));
+
+  handlers.set("fool-hand-die", checkUserClass('fool', (user, data, source) => {
+    if (!user.foolDieWithGM) {
+      user.foolDieWithGM = true;
+      sendAction(user, {action: 'user-status', text: `${user.username} handed their die to the GM.`});
+      refreshUserData(user);
+    }
+  }));
+  handlers.set("fool-take-die", checkUserClass('fool', (user, data, source) => {
+    if (user.foolDieWithGM) {
+      user.foolDieWithGM = false;
+      sendAction(user, {action: 'user-status', text: `${user.username} took their die back from the GM.`});
+      refreshUserData(user);
+    }
+  }));
+
+  handlers.set("take-fool-die", checkUserIsGM((doer, data, source) => {
+    let user = userData.get(data.username);
+    if (!user.foolDieWithGM) {
+      user.foolDieWithGM = true;
+      sendAction(doer, {action: 'user-status', text: `The GM took ${user.username}'s die.`});
+      refreshUserData(user);
+    }
+  }));
+  handlers.set("give-fool-die", checkUserIsGM((doer, data, source) => {
+    let user = userData.get(data.username);
+    if (user.foolDieWithGM) {
+      user.foolDieWithGM = false;
+      sendAction(doer, {action: 'user-status', text: `The GM gave ${user.username} back their die.`});
+      refreshUserData(user);
+    }
+  }));
 
 
-  handlers.set("delete", (data, source) => {
-    let doer = userData.get(source.username);
-    if (doer.role != "GM") {
-      console.error(`Attempt to delete by ${doer.username} (${doer.role}):`, data);
-      return;
+  function checkFoolSymbol(s, def='💩') {
+    if (!s)
+      return def;
+    let wanted = splitGraphemes(s.trim())[0];
+    if (Number.isInteger(parseInt(wanted, 10))) {
+      return def;  // can't write numbers, lol
+    } else {
+      return wanted;
     }
+  }
+
+  function getFoolDisplay(user, i) {
+    fillDefaults(user);
+    if (user.foolVariant == "1.1") {
+      if (i == user.foolDie.side) {
+        return [user.foolDie.symbol, "special"];
+      } else {
+        return [i, getRollStatus(i)];
+      }
+    } else {
+      switch (user.foolDie.sides[i - 1]) {
+        case "+":
+          return [user.foolDie.posSymbol, "special"];
+        case "-":
+          return [user.foolDie.negSymbol, "specially-bad"];
+        default:
+          console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
+          /* falls through */
+        case ".":
+          return [i, getRollStatus(i)];
+      }
+    }
+  }
+
+  handlers.set("fool-set-die", checkUserClass('fool', (user, data, source) => {
+    if (user.foolVariant == "1.1") {
+      user.foolDie = {
+        symbol: checkFoolSymbol(data.symbol),
+        side: data.side,
+      };
+    } else {
+      user.foolDie = {
+        posSymbol: checkFoolSymbol(data.posSymbol),
+        negSymbol: checkFoolSymbol(data.negSymbol, '👎'),
+        sides: data.sides,
+      };
+    }
+
+    let valDisplay = _.range(6).map(i => getFoolDisplay(user, i + 1)[0]);
+    sendAction(user, {
+      action: 'user-status',
+      text: `${user.username} scribbled on their die: ${valDisplay.join(" / ")}.`,
+    });
+    refreshUserData(user);
+  }));
+
+
+  handlers.set("kick", checkUserIsGM((doer, data, source) => {
+    sendUserOne(userData.get(data.username), {action: "kick", reason: "Kicked by GM."});
+  }));
+
+
+  handlers.set("delete", checkUserIsGM((doer, data, source) => {
     let conn = userData.get(data.username).connection;
     if (conn && conn.readyState === WebSocket.OPEN) {
       console.error(`Attempt to delete active user ${data.username}:`, data);
@@ -477,39 +615,15 @@ function buildSocketServer(webserver) {
     }
 
     userData.delete(data.username);
-    tellAboutUsers();
-  });
+    tellGMsAboutUsers();
+  }));
 
 
   handlers.set("allowMultipleGMs", checkUserIsGM((user, data, source) => {
     settings.allowMultipleGMs = data.value;
-    let msg = JSON.stringify([{action: 'allowMultipleGMs', value: data.value}]);
-    for (let client of socketserver.activeGMs()) {
-      client.send(msg);
-    }
+    socketserver.tellGMsOne({action: 'allowMultipleGMs', value: data.value});
   }));
 
-
-  function tellAboutUsers() {
-    // there's no Map.map, even in lodash. :/
-    let userInfo = [];
-    for (let user of userData.values()) {
-      if (user.role) {
-        userInfo.push({
-          username: user.username,
-          role: user.role,
-          connected: user.connection && user.connection.readyState === WebSocket.OPEN,
-          class: user.role === "GM" ? "master" : (user.class || "none"),
-        });
-      }
-    }
-    userInfo = _.sortBy(userInfo, ['role', 'username']);
-
-    let msg = JSON.stringify([{action: "users", users: userInfo}]);
-    for (let client of socketserver.activeGMs()) {
-      client.send(msg);
-    }
-  }
 
 
   // Hook up the actual responses
@@ -526,7 +640,7 @@ function buildSocketServer(webserver) {
       }
     });
     ws.on('close', e => {
-      tellAboutUsers();
+      tellGMsAboutUsers();
     });
     ws.on('error', e => {
       switch (e.code) {
@@ -546,18 +660,12 @@ function buildSocketServer(webserver) {
 ////////////////////////////////////////////////////////////////////////////////
 // Finally, actually do stuff.
 
-const args = minimist(process.argv, {
-  'default': {port: 5000, debug: false, db: './leveldb'},
-  'boolean': ['debug'],
-  'alias': {p: 'port'}
-});
-
 const db = level(args.db);
 
 getSessionSecret(db)
   .then(sessionSecret => buildSessionParser(sessionSecret, db))
   .then(sessionParser => buildExpressApp(sessionParser))
-  .then(expressApp => buildWebserver(args, expressApp))
+  .then(expressApp => buildWebserver(expressApp))
   .then(webserver => buildSocketServer(webserver).then(() => webserver))
   .then(webserver => {
     webserver.listen(args.port, () => {

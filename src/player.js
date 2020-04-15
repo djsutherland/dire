@@ -1,19 +1,24 @@
 import './dom-polyfills';
-import ready from './ready';
+import {ready, selectorValue} from './helpers';
+import range from 'lodash/range';
+import GraphemeSplitter from 'grapheme-splitter';
 import {ws, sidesByKind, classNames, selectedToggler} from './rolls';
 
-ws.handlers.set("getClass", msg => {
+const splitter = new GraphemeSplitter();
+
+function hasDie(user) {
+  if (!sidesByKind[user.class])
+    return false;
+  if (user.class === "fool" && user.foolDieWithGM)
+    return false;
+  return true;
+}
+
+ws.handlers.set("getUserData", msg => {
   let classId = document.getElementById("class-id"),
       controls = document.getElementById("class-controls");
 
-  if (!sidesByKind[msg.class]) {
-    document.querySelectorAll("#my-dice").forEach(d => d.remove());
-    if (classNames[msg.class]) {
-      classId.innerHTML = ` You're ${classNames[msg.class]}.`;
-    } else {
-      classId.innerHTML = "";
-    }
-  } else {
+  if (hasDie(msg)) {
     // get or create #my-die, inside #my-dice, inside #dice
     let die = document.getElementById('my-die');
     if (!die) {
@@ -31,48 +36,18 @@ ws.handlers.set("getClass", msg => {
     }
     die.setAttribute("src", `/img/${msg.class}.png`);
     classId.innerHTML = ` You're ${classNames[msg.class]}.`;
+  } else {
+    document.querySelectorAll("#my-dice").forEach(d => d.remove());
+    if (classNames[msg.class]) {
+      classId.innerHTML = ` You're ${classNames[msg.class]}.`;
+    } else {
+      classId.innerHTML = "";
+    }
   }
 
   switch (msg.class) {
     case "fool":
-      console.log(msg);
-      let v = msg.foolDie;
-      controls.innerHTML = `
-        <button id="hand-die">Hand the GM my die</button>
-        <form id="die-scribbler">
-          <span>Your die is currently:</span>
-          <label for="die-1">1:</label><input type="text" name="die-1" size="2" value="${v[0] || ''}" />
-          <label for="die-2">2:</label><input type="text" name="die-2" size="2" value="${v[1] || ''}" />
-          <label for="die-3">3:</label><input type="text" name="die-3" size="2" value="${v[2] || ''}" />
-          <label for="die-4">4:</label><input type="text" name="die-4" size="2" value="${v[3] || ''}" />
-          <label for="die-5">5:</label><input type="text" name="die-5" size="2" value="${v[4] || ''}" />
-          <label for="die-6">6:</label><input type="text" name="die-6" size="2" value="${v[5] || ''}" />
-          <input type="submit" value="Scribble" />
-        </form>
-      `;
-      controls.querySelector("#hand-die").addEventListener("click", () => {
-        ws.send(JSON.stringify({action: "hand-die"}));
-      });
-      controls.querySelector("#die-scribbler").addEventListener("submit", (event) => {
-        event.preventDefault();
-        let values = [];
-        for (let i = 1; i <= 6; i++) {
-          values.push(controls.querySelector(`[name="die-${i}"]`).value.trim() || null);
-        }
-        ws.send(JSON.stringify({
-          action: "scribble",
-          foolDie: values,
-        }));
-      });
-      break;
-
-    case "fool_nodie":
-      controls.innerHTML = `
-        <button id="take-die">Take die back from the GM</button>
-      `;
-      controls.querySelector("#take-die").addEventListener("click", () => {
-        ws.send(JSON.stringify({action: "take-die"}));
-      });
+      handleFool(msg, classId, controls);
       break;
 
     default:
@@ -80,3 +55,83 @@ ws.handlers.set("getClass", msg => {
       break;
   }
 });
+
+function handleFool(msg, classId, controls) {
+  if (msg.foolDieWithGM) {
+    classId.innerHTML = classId.innerHTML.trim().slice(0, -1) + ', but the GM has your die.';
+
+    controls.innerHTML = `
+      <button id="take-die">Take die back from the GM</button>
+    `;
+    controls.querySelector("#take-die").addEventListener("click", () => {
+      ws.send(JSON.stringify({action: "fool-take-die"}));
+    });
+
+  } else {
+    controls.innerHTML = '<button id="hand-die">Hand the GM my die</button>';
+    controls.querySelector("#hand-die").addEventListener("click", () => {
+      ws.send(JSON.stringify({action: "fool-hand-die"}));
+    });
+
+    let scribbler = document.createElement('form');
+    scribbler.setAttribute('id', 'die-scribbler');
+    if (msg.foolVariant == "1.1") {
+      scribbler.innerHTML = `
+        <label>Symbol: <input type="text" value="${msg.foolDie.symbol}" name="symbol" size="2" /></label>
+        <select name="side">
+          <option value="0">–</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+        <input type="submit" value="Scribble">
+      `;
+      scribbler.querySelector(`select [value="${msg.foolDie.side}"]`).setAttribute("selected", true);
+      scribbler.addEventListener('submit', (event) => {
+        event.preventDefault();
+        ws.send(JSON.stringify({
+          action: "fool-set-die",
+          symbol: scribbler.querySelector('[name="symbol"]').value,
+          side: parseInt(selectorValue(scribbler.querySelector('select')), 10),
+        }));
+      });
+    } else {
+      scribbler.innerHTML = `
+        <label>Good symbol: <input type="text" value="${msg.foolDie.posSymbol}" name="posSymbol" size="2" /></label>
+        <label>Bad symbol: <input type="text" value="${msg.foolDie.negSymbol}" name="negSymbol" size="2" /></label>
+        <label>1: <select name="1"><option value=".">1</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
+        <label>2: <select name="2"><option value=".">2</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
+        <label>3: <select name="3"><option value=".">3</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
+        <label>4: <select name="4"><option value=".">4</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
+        <label>5: <select name="5"><option value=".">5</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
+        <label>6: <select name="6"><option value=".">6</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
+        <input type="submit" value="Scribble">
+      `;
+      for (let i = 1; i <= 6; i++) {
+        scribbler.querySelector(`[name="${i}"] [value="${msg.foolDie.sides[i-1]}"]`).setAttribute("selected", true);
+      }
+      for (let inp of scribbler.querySelectorAll("input")) {
+        inp.addEventListener('input', event => {
+          let optval = event.target.name == "posSymbol" ? "+" : "-";
+          let symb = splitter.splitGraphemes(event.target.value.trim())[0] || optval;
+          for (let opt of scribbler.querySelectorAll(`option[value="${optval}"]`)) {
+            opt.innerHTML = symb;
+          }
+        });
+      }
+      scribbler.addEventListener('submit', (event) => {
+        event.preventDefault();
+        ws.send(JSON.stringify({
+          action: "fool-set-die",
+          posSymbol: scribbler.querySelector('[name="posSymbol"]').value,
+          negSymbol: scribbler.querySelector('[name="negSymbol"]').value,
+          sides: range(1, 7).map(i => selectorValue(scribbler.querySelector(`select[name="${i}"]`))),
+        }));
+      });
+    }
+    controls.append(scribbler);
+  }
+}
