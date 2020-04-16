@@ -63,14 +63,33 @@ ws.handlers.set("users", msg => {
                 </select>
                 <label>
                     GM has die:
-                    <input type="checkbox" name="has-own-die" ${user.foolDieWithGM ? "checked" : ""}>
+                    <input type="checkbox" name="GM-has-die" ${user.foolDieWithGM ? "checked" : ""}>
                 </label>
             `;
             let sel = extras.querySelector('select[name="foolVariant"]');
-            sel.setAttribute("selected", true);
+            sel.querySelector(`[value="${user.foolVariant}"]`).setAttribute("selected", true);
             sel.addEventListener("change", setFoolVariant);
 
-            extras.querySelector('[name="has-own-die"]').addEventListener("change", setFoolHasDie);
+            extras.querySelector('[name="GM-has-die"]').addEventListener("change", setFoolHasDie);
+
+            if (user.foolVariant == "1.1") {
+                let symb = document.createElement("span");
+                symb.innerHTML = user.foolDie.symbol;
+                extras.appendChild(symb);
+            } else {
+                let summary = document.createElement("span");
+                let n_pos = 0, n_neg = 0;
+                for (let v of user.foolDie.sides) {
+                    if (v == '+') {
+                        n_pos++;
+                    } else if (v == '-') {
+                        n_neg++;
+                    }
+                }
+                summary.innerHTML = `(${n_pos} good, ${n_neg} bad)`;
+                summary.setAttribute("title", user.foolDie.effect);
+                extras.appendChild(summary);
+            }
         }
 
         tbody.appendChild(tr);

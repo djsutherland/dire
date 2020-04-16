@@ -14,7 +14,10 @@ const gameData = require('./src/game-data');
 sidesByKind = gameData.sidesByKind;
 classNames = gameData.classNames;
 
-const siteName = 'DIRE: the DIE Internet Rolling Engine';
+const foolDefaultGood = '😲';
+const foolDefaultBad = '💩';
+
+const siteName = 'DIRE, the DIE Internet Rolling Experience';
 
 
 const args = minimist(process.argv, {
@@ -303,7 +306,9 @@ function buildSocketServer(webserver) {
 
     let msg = JSON.stringify([act]);
     for (let client of socketserver.activeClients()) {
-      client.send(msg);
+      if (!act.private || client.role === "GM" || client.username === act.username) {
+        client.send(msg);
+      }
     }
   }
 
@@ -346,7 +351,7 @@ function buildSocketServer(webserver) {
           if (user.foolVariant == "1.1") {
             user.foolDie = {
               symbol: "?",
-              side: 1,
+              side: 0,
             };
           } else {
             if (user.foolVariant != "1.2") {
@@ -356,9 +361,10 @@ function buildSocketServer(webserver) {
               user.foolVariant = "1.2";
             }
             user.foolDie = {
-              posSymbol: "👍",
-              negSymbol: "👎",
+              posSymbol: foolDefaultGood,
+              negSymbol: foolDefaultBad,
               sides: [".", ".", ".", ".", ".", "."],
+              effect: "Your opponent gets talking and confesses something useful to you.",
             };
           }
         }
@@ -422,15 +428,18 @@ function buildSocketServer(webserver) {
     user.role = data.role;
     user.connection = source;
 
+    let theLog;
     if (user.role === "player") {
       refreshUserData(user);
+      theLog = _.filter(actionsLog, e => !e.private || e.username === user.username);
     } else {
       tellGMsAboutUsers();
+      theLog = actionsLog;
     }
 
     if (args.debug)
-      console.log(`Sending ${source.username} the action log (length ${actionsLog.length})`);
-    source.send(JSON.stringify(actionsLog));
+      console.log(`Sending ${source.username} the action log (length ${theLog.length})`);
+    source.send(JSON.stringify(theLog));
   });
 
 
@@ -545,7 +554,7 @@ function buildSocketServer(webserver) {
   }));
 
 
-  function checkFoolSymbol(s, def='💩') {
+  function checkFoolSymbol(s, def=foolDefaultGood) {
     if (!s)
       return def;
     let wanted = splitGraphemes(s.trim())[0];
@@ -580,6 +589,7 @@ function buildSocketServer(webserver) {
   }
 
   handlers.set("fool-set-die", checkUserClass('fool', (user, data, source) => {
+    let extraText = '';
     if (user.foolVariant == "1.1") {
       user.foolDie = {
         symbol: checkFoolSymbol(data.symbol),
@@ -588,16 +598,16 @@ function buildSocketServer(webserver) {
     } else {
       user.foolDie = {
         posSymbol: checkFoolSymbol(data.posSymbol),
-        negSymbol: checkFoolSymbol(data.negSymbol, '👎'),
+        negSymbol: checkFoolSymbol(data.negSymbol, foolDefaultBad),
         sides: data.sides,
+        effect: data.effect.trim(),
       };
+      extraText = ` Effect: ${user.foolDie.effect}`;
     }
 
     let valDisplay = _.range(6).map(i => getFoolDisplay(user, i + 1)[0]);
-    sendAction(user, {
-      action: 'user-status',
-      text: `${user.username} scribbled on their die: ${valDisplay.join(" / ")}.`,
-    });
+    let text = `${user.username} scribbled on their die: ${valDisplay.join(" / ")}.` + extraText;
+    sendAction(user, {action: 'user-status', text: text, private: true});
     refreshUserData(user);
   }));
 

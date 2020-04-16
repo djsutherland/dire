@@ -77,25 +77,37 @@ function handleFool(msg, classId, controls) {
     scribbler.setAttribute('id', 'die-scribbler');
     if (msg.foolVariant == "1.1") {
       scribbler.innerHTML = `
-        <label>Symbol: <input type="text" value="${msg.foolDie.symbol}" name="symbol" size="2" /></label>
-        <select name="side">
-          <option value="0">–</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-        </select>
-        <input type="submit" value="Scribble">
+        <label>
+          Symbol:
+          <select name="symbol">
+            <option value="?" disabled>Choose a symbol</option>
+            <option value="X">X: Disarm a foe</option>
+            <option value="O">O: Knock a foe over; they lose all guard</option>
+            <option value="V">V: Inspire all allies to get advantage next round</option>
+          </select>
+        </label>
+        on
+        <label>
+          die side:
+          <select name="side">
+            <option value="0" disabled>–</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </label>
       `;
-      scribbler.querySelector(`select [value="${msg.foolDie.side}"]`).setAttribute("selected", true);
-      scribbler.addEventListener('submit', (event) => {
+      scribbler.querySelector(`select[name="symbol"] [value="${msg.foolDie.symbol}"]`).setAttribute("selected", true);
+      scribbler.querySelector(`select[name="side"] [value="${msg.foolDie.side}"]`).setAttribute("selected", true);
+      scribbler.addEventListener('change', (event) => {
         event.preventDefault();
         ws.send(JSON.stringify({
           action: "fool-set-die",
-          symbol: scribbler.querySelector('[name="symbol"]').value,
-          side: parseInt(selectorValue(scribbler.querySelector('select')), 10),
+          symbol: selectorValue(scribbler.querySelector('[name="symbol"]')),
+          side: parseInt(selectorValue(scribbler.querySelector('select[name="side"]')), 10),
         }));
       });
     } else {
@@ -108,11 +120,13 @@ function handleFool(msg, classId, controls) {
         <label>4: <select name="4"><option value=".">4</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
         <label>5: <select name="5"><option value=".">5</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
         <label>6: <select name="6"><option value=".">6</option><option value="+">${msg.foolDie.posSymbol}</option><option value="-">${msg.foolDie.negSymbol}</option></select></label>
-        <input type="submit" value="Scribble">
+        <br>
+        <label>Good fluke: <input type="text" name="fluke" size="80"></label>
       `;
       for (let i = 1; i <= 6; i++) {
         scribbler.querySelector(`[name="${i}"] [value="${msg.foolDie.sides[i-1]}"]`).setAttribute("selected", true);
       }
+      scribbler.querySelector("[name='fluke']").value = msg.foolDie.effect;  // avoid worrying about escaping
       for (let inp of scribbler.querySelectorAll("input")) {
         inp.addEventListener('input', event => {
           let optval = event.target.name == "posSymbol" ? "+" : "-";
@@ -122,13 +136,13 @@ function handleFool(msg, classId, controls) {
           }
         });
       }
-      scribbler.addEventListener('submit', (event) => {
-        event.preventDefault();
+      scribbler.addEventListener('change', (event) => {
         ws.send(JSON.stringify({
           action: "fool-set-die",
           posSymbol: scribbler.querySelector('[name="posSymbol"]').value,
           negSymbol: scribbler.querySelector('[name="negSymbol"]').value,
           sides: range(1, 7).map(i => selectorValue(scribbler.querySelector(`select[name="${i}"]`))),
+          effect: scribbler.querySelector('[name="fluke"]').value,
         }));
       });
     }

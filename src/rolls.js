@@ -85,6 +85,9 @@ export function setupResultLine(response) {
   let node = document.createElement("div");
   node.classList.add("result");
   node.classList.add(response.action);
+  if (response.private) {
+    node.classList.add("private");
+  }
   node.innerHTML = `
     <div class="meta">
       <div class="name ${response.role}">
@@ -147,7 +150,7 @@ export function getKicked(msg, ws) {
   error.innerHTML = `<span>${msg.reason}<br><a href="/">Go home</a></span>`;
   error.style.display = "flex";
   document.getElementById("the-content").innerHTML = "";
-  ws.close();
+  ws.ws.close();
   // window.location.href = `/?msg=${encodeURIComponent(msg.reason)}`;
 }
 
