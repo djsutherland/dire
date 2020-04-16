@@ -42,9 +42,55 @@ class DefaultMap extends Map {
 }
 
 // server global data
-let settings = {allowMultipleGMs: true};
-let userData = new DefaultMap(username => { return {username: username}; });
-let actionsLog = [];
+let settings = {},
+    userData = new DefaultMap(username => { return {username: username}; }),
+    actionsLog;
+
+function ifNotFound(f = () => {}) {
+  return err => {
+    if (err && err.notFound) {
+      return Promise.resolve(f());
+    } else {
+      throw err;
+    }
+  };
+}
+
+function initializeFromDB(db) {
+  return Promise.all([
+    db.get('settings/allowMultipleGMs')
+      .then(v => settings.allowMultipleGMs = JSON.parse(v))
+      .catch(ifNotFound(() => { settings.allowMultipleGMs = true; })),
+
+    db.get('usernames')
+      .then(names => {
+        names = JSON.parse(names);
+        console.log('names', names)
+        return Promise.all(
+          names.map(n => {
+            return db.get(`users/${n}`)
+                     .then(JSON.parse)
+                     .catch(ifNotFound(() => { return {username: n}; }))
+                     .then(d => userData.set(n, d));
+          })).then(() => {
+            console.log(`Loaded data for ${names.length} users.`);
+          });
+      }).catch(ifNotFound(() => { console.log("No user data found."); })),
+
+    db.get('n-actions')
+      .then(nTotal => {
+        nTotal = parseInt(nTotal, 10);
+        actionsLog = new Array(nTotal);
+        return Promise.all(_.range(nTotal).map(n => {
+          return db.get(`actions/${n}`).then(a => actionsLog[n] = JSON.parse(a));
+        })).then(() => {
+          console.log(`Loaded data for ${nTotal} actions.`);
+        });
+      })
+      .catch(ifNotFound(() => { actionsLog = []; console.log("No action data found."); })),
+  ]);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Some processing to handle sessions.
@@ -300,6 +346,8 @@ function buildSocketServer(webserver) {
     }, result);
 
     actionsLog.push(act);
+    db.put(`actions/${actionsLog.length - 1}`, JSON.stringify(act));
+    db.put('n-actions', actionsLog.length);
 
     if (args.debug)
       console.log(`Broadcasting action:`, act);
@@ -323,7 +371,6 @@ function buildSocketServer(webserver) {
   }
 
   function tellGMsAboutUsers() {
-    // there's no Map.map, even in lodash. :/
     let userInfo = [];
     for (let user of userData.values()) {
       let res = userDataForSending(user);
@@ -394,10 +441,9 @@ function buildSocketServer(webserver) {
   function refreshUserData(user) {
     sendUserOne(user, Object.assign({action: "getUserData"}, userDataForSending(user)));
     tellGMsAboutUsers();
-  }
 
-  function getFoolDie(val) {
-    return val.foolDie || [null, null, null, null, null, null];
+    db.put('usernames', JSON.stringify([...userData.keys()]));
+    db.put(`users/${user.username}`, JSON.stringify(user));
   }
 
 
@@ -671,8 +717,8 @@ function buildSocketServer(webserver) {
 // Finally, actually do stuff.
 
 const db = level(args.db);
-
-getSessionSecret(db)
+initializeFromDB(db)
+  .then(() => getSessionSecret(db))
   .then(sessionSecret => buildSessionParser(sessionSecret, db))
   .then(sessionParser => buildExpressApp(sessionParser))
   .then(expressApp => buildWebserver(expressApp))

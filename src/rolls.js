@@ -40,6 +40,7 @@ export class WSHandler {
     let err = document.getElementById('error');
     err.style.display = 'none';
     err.innerHTML = "";
+    rolls.innerHTML = "";
     ws.send(JSON.stringify({action: `hello`, role: role(), username: username()}));
   }
 
@@ -95,7 +96,7 @@ export function setupResultLine(response) {
         ${response.username}
         ${response.role !== 'player' ? "<span class='role'>(" + response.role + ")</span>" : ""}
       </div>
-      <div class="time">${time.toLocaleTimeString()}</div>
+      <div class="time">${time.toLocaleString()}</div>
     </div>
     <div class="body"></div>
   `;

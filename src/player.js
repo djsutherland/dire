@@ -68,7 +68,7 @@ function handleFool(msg, classId, controls) {
     });
 
   } else {
-    controls.innerHTML = '<button id="hand-die">Hand the GM my die</button>';
+    controls.innerHTML = '<button id="hand-die">Hand the GM your die</button>';
     controls.querySelector("#hand-die").addEventListener("click", () => {
       ws.send(JSON.stringify({action: "fool-hand-die"}));
     });
