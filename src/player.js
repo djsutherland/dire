@@ -35,11 +35,11 @@ ws.handlers.set("getUserData", msg => {
       div.prepend(die);
     }
     die.setAttribute("src", `/img/${msg.class}.png`);
-    classId.innerHTML = ` You're ${classNames[msg.class]}.`;
+    classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${classNames[msg.class]}</a>.`;
   } else {
     document.querySelectorAll("#my-dice").forEach(d => d.remove());
     if (classNames[msg.class]) {
-      classId.innerHTML = ` You're ${classNames[msg.class]}.`;
+      classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${classNames[msg.class]}</a>.`;
     } else {
       classId.innerHTML = "";
     }

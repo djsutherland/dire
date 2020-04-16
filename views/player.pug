@@ -3,7 +3,13 @@ extends roller
 block above-roller
   p#welcome
     | Welcome, #{username}.
+    = ' '
     span#class-id
+    = ' '
+    | Check out the
+    = ' '
+    a(target="_new", href="/pdfs/core-rules-cheat-sheet.pdf") core rules cheat sheet
+    | .
 
   #class-controls
 
