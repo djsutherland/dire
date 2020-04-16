@@ -1,5 +1,6 @@
 import {ready, selectorValue} from './helpers';
 import escape from 'lodash/escape'; 
+import hotkeys from 'hotkeys-js';
 export {sidesByKind, classNames} from './game-data';
 
 export function username() {
@@ -156,13 +157,7 @@ export function getKicked(msg, ws) {
 
 
 export function selectedToggler(img) {
-  return event => {
-    if (img.classList.contains("selected")) {
-      img.classList.remove("selected");
-    } else {
-      img.classList.add("selected");
-    }
-  };
+  return event => { img.classList.toggle("selected"); };
 }
 
 export function safetyHitter(button) {
@@ -199,13 +194,18 @@ export function addAd6(event) {
   document.getElementById('base-dice').prepend(die);
 
   document.getElementById("fewer-d6").removeAttribute("disabled");
+  if (document.querySelectorAll('#base-dice img[data-kind="d6"]').length > 12) {
+    document.getElementById("more-d6").setAttribute("disabled", true);
+  }
 }
 
 export function removeAd6(event) {
   let dice = document.querySelectorAll("#base-dice img[data-kind='d6']");
   dice[0].remove();
+
+  document.getElementById('more-d6').removeAttribute('disabled');
   if (dice.length <= 4) {
-    document.getElementById("fewer-d6").setAttribute("disabled", "disabled");
+    document.getElementById("fewer-d6").setAttribute("disabled", true);
   }
 }
 
@@ -214,7 +214,6 @@ ready(() => {
   for (let img of document.querySelectorAll("#dice img")) {
     img.addEventListener("click", selectedToggler(img));
   }
-  document.getElementById("roll").addEventListener("click", roll);
   document.getElementById("more-d6").addEventListener("click", addAd6);
   document.getElementById("fewer-d6").addEventListener("click", removeAd6);
   document.getElementById("roll").addEventListener("click", roll);
@@ -253,3 +252,50 @@ ready(() => {
     });
   }
 });
+
+
+
+hotkeys('0,1,2,3,4,5,6,7,8,9', (event, handler) => {
+  let n = parseInt(handler.key, 10);
+  // make sure we have enough
+  let n_dice = document.querySelectorAll("#base-dice img[data-kind='d6']").length;
+  for (let j = 0; j < n - n_dice; j++)
+    addAd6();
+
+  let dice = document.querySelectorAll("#base-dice img[data-kind='d6']");
+  for (let i = 0; i < dice.length; i++) {
+    if (i < n) {
+      dice[i].classList.add("selected");
+    } else {
+      dice[i].classList.remove("selected");
+    }
+  }
+});
+hotkeys("`,b,c,d,f,k,n,g,m", (event, handler) => {
+  let kind;
+  switch (handler.key) {
+    case "b": kind = "bad"; break;
+    case "`": kind = "class"; break;
+    case "c": kind = "class"; break;
+    case "d": kind = "dictator"; break;
+    case "f": kind = "fool"; break;
+    case "k": kind = "knight"; break;
+    case "n": kind = "neo"; break;
+    case "g": kind = "godbinder"; break;
+    case "m": kind = "master"; break;
+  }
+  let target = document.querySelector(`#dice img[data-kind="${kind}"]`);
+  if (!target && kind != "bad") {
+    target = document.querySelector(`#my-die`);
+    if (!target) {
+      target = document.querySelector('img[data-kind="master"]');
+    }
+  }
+  if (target) {
+    target.classList.toggle("selected");
+  }
+});
+hotkeys('-', () => { document.getElementById('fewer-d6').click(); });
+hotkeys('=, shift+=', () => { document.getElementById('more-d6').click(); });
+hotkeys('enter', () => { roll(); });
+

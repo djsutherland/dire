@@ -12,7 +12,6 @@
   "license": "ISC",
   "browserslist": "> 0.1%, not dead",
   "dependencies": {
-    "core-js": "^3.6.4",
     "crypto-random-string": "^3.2.0",
     "express": "^4.17.1",
     "express-session": "^1.17.0",
@@ -31,6 +30,8 @@
     "@babel/preset-env": "^7.9.5",
     "@babel/register": "^7.9.0",
     "babel-loader": "^8.1.0",
+    "core-js": "^3.6.4",
+    "hotkeys-js": "^3.7.6",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11"
   }

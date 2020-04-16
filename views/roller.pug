@@ -26,9 +26,12 @@ block content
               img(data-kind="d6", src="/img/d6.png")
             img(id="bad-die", data-kind="bad", src="/img/bad.png")
       #controls
-        button#fewer-d6 Fewer d6es
+        span
         button#roll Roll!
-        button#more-d6 More d6es
+        span
+          | d6es:
+          button#fewer-d6 -
+          button#more-d6 +
 
     #safety
       label
