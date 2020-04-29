@@ -71,7 +71,7 @@ function initializeFromDB(db) {
             return db.get(`users/${n}`)
                      .then(JSON.parse)
                      .catch(ifNotFound(() => { return {username: n}; }))
-                     .then(d => userData.set(n, d));
+                     .then(d => { delete d.connection; userData.set(n, d); });
           })).then(() => {
             console.log(`Loaded data for ${names.length} users.`);
           });
@@ -443,7 +443,8 @@ function buildSocketServer(webserver) {
     tellGMsAboutUsers();
 
     db.put('usernames', JSON.stringify([...userData.keys()]));
-    db.put(`users/${user.username}`, JSON.stringify(user));
+    db.put(`users/${user.username}`, JSON.stringify(
+        Object.assign({}, user, {connection: undefined})));
   }
 
 
