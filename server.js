@@ -673,6 +673,8 @@ function buildSocketServer(webserver) {
 
     userData.delete(data.username);
     tellGMsAboutUsers();
+    db.del(`users/${data.username}`);
+    db.put('usernames', JSON.stringify([...userData.keys()]));
   }));
 
 
