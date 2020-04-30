@@ -1,7 +1,9 @@
 import escape from 'lodash/escape'; 
 import hotkeys from 'hotkeys-js';
+const floor = Math.floor, ceil = Math.ceil;
 
 import {ready, selectorValue} from './helpers';
+import {sidesByKind, classNames, dicePaths} from './game-data';
 export {sidesByKind, classNames} from './game-data';
 
 export function username() {
@@ -11,7 +13,7 @@ export function role() {
   return document.getElementById('metadata').dataset.role;
 }
 
-export let can_notify;
+export let can_notify; // status of html notifications
 
 export class WSHandler {
   constructor() {
@@ -22,6 +24,7 @@ export class WSHandler {
     this.handlers.set("chat", showChat);
     this.handlers.set("user-status", showUserStatus);
     this.handlers.set("kick", getKicked);
+    this.handlers.set("users", getUsersUpdate);
     this.wasKicked = false;
   }
 
@@ -82,6 +85,142 @@ export function roll() {
 }
 
 
+export let userData = {};
+export function getUsersUpdate(msg) {
+  userData = msg.users;
+  drawCanvas();
+}
+
+function roundedRect(ctx, x, y, w, h, r) {
+  if (w < 2 * r) r = w / 2;
+  if (h < 2 * r) r = h / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x+w,  y , x+w, y+h, r);
+  ctx.arcTo(x+w, y+h,  x , y+h, r);
+  ctx.arcTo( x , y+h,  x ,  y , r);
+  ctx.arcTo( x ,  y , x+w,  y , r);
+  ctx.closePath();
+}
+
+const classDieFill = "purple",
+      classDieStroke = "black",
+      classDieTextColor = "rgb(230,170,100)";
+
+let diceCanvases = {};
+function drawDie(ctx, klass, value, cx, cy, size) {
+  let dieCanvas = diceCanvases[klass];
+  if (!dieCanvas) {
+    dieCanvas = diceCanvases[klass] = document.createElement('canvas');
+    dieCanvas.setAttribute("width", size);
+    dieCanvas.setAttribute("height", size);
+    let c = dieCanvas.getContext('2d');
+    c.scale(size / 500, size / 500);
+    c.fillStyle = classDieFill;
+    c.fill(new Path2D(dicePaths[klass].fill));
+    c.strokeStyle = classDieStroke;
+    c.stroke(new Path2D(dicePaths[klass].stroke));
+  }
+
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  let scale = size / parseInt(dieCanvas.getAttribute("width"), 10);
+  if (scale != 1)
+    ctx.scale(scale, scale);
+
+  ctx.drawImage(dieCanvas, 0, 0);
+
+  ctx.fillStyle = classDieTextColor;
+  ctx.font = `${floor(size * 0.3)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(value, floor(size / 2), floor(dicePaths[klass].text * size));
+
+  ctx.restore();
+}
+
+
+function drawD6Pips(ctx, cx, cy, size, value, dieColor="white", dotColor="black") {
+  ctx.save();
+
+  ctx.fillStyle = dieColor;
+  roundedRect(ctx, floor(cx - size / 2), floor(cy - size / 2), size, size,
+              floor(size / 10));
+  ctx.fill();
+
+  // based, ish, on https://codepen.io/rheajt/pen/MOMGKK
+
+  let dots = [];
+  switch (value) {
+    case 1: dots = ['cc']; break;
+    case 2: dots = ['nw', 'se']; break;
+    case 3: dots = ['nw', 'cc', 'se']; break;
+    case 4: dots = ['nw', 'ne', 'sw', 'se']; break;
+    case 5: dots = ['nw', 'ne', 'cc', 'sw', 'se']; break;
+    case 6: dots = ['nw', 'ne', 'cw', 'ce', 'sw', 'se']; break;
+    default: console.error(`Invalid d6 value ${value}`); return;
+  }
+
+  ctx.fillStyle = dotColor;
+  for (let loc of dots) {
+    let x, y;
+    switch (loc[0]) {
+      case 'n': y = cy - 0.25 * size; break;
+      case 'c': y = cy; break;
+      case 's': y = cy + 0.25 * size; break;
+    }
+    switch (loc[1]) {
+      case 'w': x = cx - 0.25 * size; break;
+      case 'c': x = cx; break;
+      case 'e': x = cx + 0.25 * size; break;
+    }
+    ctx.beginPath();
+    ctx.arc(floor(x), floor(y), floor(size * 0.06) + 1, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+let canvas, lastRoll;
+export function drawCanvas() {
+  if (!canvas) canvas = document.getElementById('canvas');
+  if (!canvas.getContext) return;
+  let ctx = canvas.getContext('2d');
+
+  let height = canvas.height, width = canvas.width;
+
+  // draw table - TODO turn into an image or sth
+  let tabLeft = 0, tabTop = 0, tabWidth = width, tabHeight = height;
+  // let tabLeft = floor(width * 0.15), tabTop = floor(height * 0.5),
+  //     tabWidth = floor(width * 0.7), tabHeight = floor(height * 0.5);
+  let tabMidX = floor(tabLeft + tabWidth / 2),
+      tabMidY = floor(tabTop + tabHeight / 2);
+  roundedRect(ctx, tabLeft, tabTop, tabWidth, tabHeight, 20);
+  ctx.fillStyle = 'rgb(20, 112, 37)';
+  ctx.fill();
+
+  if (lastRoll) {
+    // TODO: wrap if too wide
+    const nRolls = lastRoll.rolls.length;
+    const sz = 100, pad = 0, w = sz + 2 * pad;
+    lastRoll.rolls.forEach((roll, i) => {
+      let x = tabMidX + w * (i - (nRolls - 1) / 2),
+          y = tabMidY;
+      if (roll.kind == "d6") {
+        drawD6Pips(ctx, x, y, sz * 0.7, roll.roll, "white", "black");
+      } else if (roll.kind == "bad") {
+        drawD6Pips(ctx, x, y, sz * 0.7, roll.roll, "#f55", "white");
+      } else {
+        drawDie(ctx, roll.kind, roll.roll, x, y, sz);
+      }
+    });
+  }
+
+}
+ready(drawCanvas);
+
+
 export function setupResultLine(response) {
   let time = new Date(response.time);
 
@@ -109,9 +248,11 @@ export function setupResultLine(response) {
 }
 
 export function showRolls(response) {
+  lastRoll = response;
+  drawCanvas();
+
   let bodynode = setupResultLine(response);
-  for (let i = 0; i < response.rolls.length; i++) {
-    let roll = response.rolls[i];
+  for (let roll of response.rolls) {
     let child = document.createElement('span');
     child.classList.add("roll");
     child.dataset.kind = roll.kind;

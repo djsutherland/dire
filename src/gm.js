@@ -1,7 +1,7 @@
 import hotkeys from 'hotkeys-js';
 
 import {ready, selectorValue} from './helpers';
-import {ws, can_notify, username} from './rolls';
+import {ws, can_notify, username, getUsersUpdate} from './rolls';
 import {foolEffects11} from './game-data';
 
 function sendAction(event, params) {
@@ -77,6 +77,7 @@ function addFoolVariantSelector(user, extras) {
 
 
 ws.handlers.set("users", msg => {
+    getUsersUpdate(msg);
     let me = username();
     let tbody = document.querySelector('#clients tbody');
     tbody.innerHTML = "";

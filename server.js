@@ -228,7 +228,9 @@ function buildExpressApp(sessionParser) {
     res.render('player', {
       title: `DIRE - Playing`,
       username: req.session.username,
-      role: 'player'
+      role: 'player',
+      classNames: classNames,
+      sidesByKind: sidesByKind,
     });
   }));
 
@@ -382,7 +384,7 @@ function buildSocketServer(webserver) {
       }
     }
     userInfo = _.sortBy(userInfo, ['role', 'username']);
-    socketserver.tellGMsOne({action: "users", users: userInfo});
+    socketserver.tellAllOne({action: "users", users: userInfo});
   }
 
   function fillDefaults(user) {

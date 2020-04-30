@@ -1,0 +1,21 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 500 500" style="enable-background:new 0 0 500 500;">
+  <style type="text/css">
+    .fill{fill:#fff;}
+    .stroke{fill:#000;}
+    .value{
+    fill:#000;
+    font-family:'Ubuntu Condensed-Regular', 'Ubuntu Condensed', sans-serif;
+    font-size:140px;
+    letter-spacing:-10px;
+  }
+  </style>
+
+  <g>
+    <path class="fill" d="M385,415H115c-16.6,0-30-13.4-30-30V115c0-16.6,13.4-30,30-30h270c16.6,0,30,13.4,30,30v270 C415,401.6,401.6,415,385,415z" style="fill: rgb(88, 181, 243);"></path>
+  </g>
+  <g>
+    <path class="stroke" d="M385,421H115c-19.9,0-36-16.1-36-36V115c0-19.9,16.1-36,36-36h270c19.9,0,36,16.1,36,36v270C421,404.9,404.9,421,385,421z M115,91c-13.2,0-24,10.8-24,24v270c0,13.2,10.8,24,24,24h270c13.2,0,24-10.8,24-24V115c0-13.2-10.8-24-24-24H115z" style="fill: rgb(0, 0, 0);"></path> </g>
+  <g>
+    <text x="50%" y="54%" class="value" alignment-baseline="middle" text-anchor="middle">6</text>
+  </g>
+</svg>
