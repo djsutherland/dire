@@ -55,16 +55,20 @@ function addFoolVariantSelector(user, extras) {
         extras.appendChild(symb);
     } else {
         let summary = document.createElement("span");
-        let n_pos = 0, n_neg = 0;
-        for (let v of user.foolDie.sides) {
+        let die = user.foolDie, n_pos = 0, n_neg = 0, disp = new Array(6);
+        die.sides.forEach((v, i) => {
             if (v == '+') {
                 n_pos++;
+                disp[i] = die.posSymbol;
             } else if (v == '-') {
                 n_neg++;
+                disp[i] = die.negSymbol;
+            } else {
+                disp[i] = i;
             }
-        }
+        });
         summary.innerHTML = `(${n_pos} good, ${n_neg} bad)`;
-        summary.setAttribute("title", user.foolDie.effect);
+        summary.setAttribute("title", `${disp.join(' / ')}\n${die.posSymbol}: ${user.foolDie.effect}`);
         extras.appendChild(summary);
     }
 }

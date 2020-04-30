@@ -625,9 +625,9 @@ function buildSocketServer(webserver) {
     } else {
       switch (user.foolDie ? user.foolDie.sides[i - 1] : ".") {
         case "+":
-          return [`<s>${i}</s> ${user.foolDie.posSymbol}`, `${getRollStatus(i)}`];
+          return [`${i}→${user.foolDie.posSymbol}`, `${getRollStatus(i)}`];
         case "-":
-          return [`<s>${i}</s> ${user.foolDie.negSymbol}`, `${getRollStatus(i)}`];
+          return [`${i}→${user.foolDie.negSymbol}`, `${getRollStatus(i)}`];
         default:
           console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
           /* falls through */
