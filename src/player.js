@@ -21,25 +21,19 @@ ws.handlers.set("getUserData", msg => {
       controls = document.getElementById("class-controls");
 
   if (hasDie(msg)) {
-    // get or create #my-die, inside #my-dice, inside #dice
+    // get or create #my-die, inside #dice
     let die = document.getElementById('my-die');
     if (!die) {
-      let div = document.getElementById("my-dice");
-      if (!div) {
-        div = document.createElement('div');
-        div.setAttribute('id', 'my-dice');
-        document.getElementById("dice").prepend(div);
-      }
       die = document.createElement('img');
       die.setAttribute('id', 'my-die');
       die.dataset.kind = "class";
       die.addEventListener("click", selectedToggler(die));
-      div.prepend(die);
+      document.getElementById('dice').prepend(die);
     }
     die.setAttribute("src", `/img/${msg.class}.png`);
     classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${classNames[msg.class]}</a>.`;
   } else {
-    document.querySelectorAll("#my-dice").forEach(d => d.remove());
+    document.querySelectorAll("#my-die").forEach(d => d.remove());
     if (classNames[msg.class]) {
       classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${classNames[msg.class]}</a>.`;
     } else {

@@ -133,7 +133,7 @@ ws.handlers.set("allowMultipleGMs", msg => {
 
 function updateAllDice() {
     let shown = document.getElementById('showAllDice').checked;
-    for (let die of document.querySelectorAll('#my-dice img:not(#my-die)')) {
+    for (let die of document.querySelectorAll('img.otherclasses')) {
         if (shown) {
             die.classList.remove("nodisplay");
         } else {

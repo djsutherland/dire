@@ -23,11 +23,10 @@ block above-roller
           = className
 
 block my-dice
-  #my-dice
-    for className, classVal in classNames
-      if sidesByKind[classVal] && classVal != "master"
-        img.nodisplay(data-kind=classVal, src=`/img/${classVal}.png`)
-    img#my-die(data-kind="master", src='/img/master.png')
+  for className, classVal in classNames
+    if sidesByKind[classVal] && classVal != "master"
+      img.otherclasses.nodisplay(data-kind=classVal, src=`/img/${classVal}.png`)
+  img#my-die(data-kind="master", src='/img/master.png')
 
 block left-controls
   label

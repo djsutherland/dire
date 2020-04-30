@@ -193,17 +193,19 @@ export function addAd6(event) {
   die.setAttribute("src", "/img/d6.png");
   die.setAttribute("data-kind", "d6");
   die.addEventListener("click", selectedToggler(die));
-  document.getElementById('base-dice').prepend(die);
+
+  let bad = document.querySelector('#dice img[data-kind="bad"]');
+  bad.parentNode.insertBefore(die, bad);
 
   document.getElementById("fewer-d6").removeAttribute("disabled");
-  if (document.querySelectorAll('#base-dice img[data-kind="d6"]').length > 12) {
+  if (document.querySelectorAll('#dice img[data-kind="d6"]').length > 12) {
     document.getElementById("more-d6").setAttribute("disabled", true);
   }
 }
 
 export function removeAd6(event) {
-  let dice = document.querySelectorAll("#base-dice img[data-kind='d6']");
-  dice[0].remove();
+  let dice = document.querySelectorAll("#dice img[data-kind='d6']");
+  dice[dice.length - 1].remove();
 
   document.getElementById('more-d6').removeAttribute('disabled');
   if (dice.length <= 4) {
@@ -260,11 +262,11 @@ ready(() => {
 hotkeys('0,1,2,3,4,5,6,7,8,9', (event, handler) => {
   let n = parseInt(handler.key, 10);
   // make sure we have enough
-  let n_dice = document.querySelectorAll("#base-dice img[data-kind='d6']").length;
+  let n_dice = document.querySelectorAll("#dice img[data-kind='d6']").length;
   for (let j = 0; j < n - n_dice; j++)
     addAd6();
 
-  let dice = document.querySelectorAll("#base-dice img[data-kind='d6']");
+  let dice = document.querySelectorAll("#dice img[data-kind='d6']");
   for (let i = 0; i < dice.length; i++) {
     if (i < n) {
       dice[i].classList.add("selected");
