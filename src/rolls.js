@@ -88,7 +88,7 @@ export function roll() {
 export let userData = {};
 export function getUsersUpdate(msg) {
   userData = msg.users;
-  drawCanvas();
+  // drawCanvas();
 }
 
 function roundedRect(ctx, x, y, w, h, r) {
@@ -107,118 +107,159 @@ const classDieFill = "purple",
       classDieStroke = "black",
       classDieTextColor = "rgb(230,170,100)";
 
-let diceCanvases = {};
-function drawDie(ctx, klass, value, cx, cy, size) {
-  let dieCanvas = diceCanvases[klass];
-  if (!dieCanvas) {
-    dieCanvas = diceCanvases[klass] = document.createElement('canvas');
-    dieCanvas.setAttribute("width", size);
-    dieCanvas.setAttribute("height", size);
-    let c = dieCanvas.getContext('2d');
-    c.scale(size / 500, size / 500);
-    c.fillStyle = classDieFill;
-    c.fill(new Path2D(dicePaths[klass].fill));
-    c.strokeStyle = classDieStroke;
-    c.stroke(new Path2D(dicePaths[klass].stroke));
-  }
+let svgDice = {};
+function getDie(kind, value, fillColor, strokeColor, textColor) {
+  const svg = document.getElementById('svgfield'),
+        ns = svg.getAttribute("xmlns");
 
-  ctx.save();
-  ctx.translate(cx - size / 2, cy - size / 2);
-  let scale = size / parseInt(dieCanvas.getAttribute("width"), 10);
-  if (scale != 1)
-    ctx.scale(scale, scale);
+  if (kind != "d6" && kind != "bad") {
+    if (!fillColor) fillColor = classDieFill;
+    if (!strokeColor) strokeColor = classDieStroke;
+    if (!textColor) textColor = classDieTextColor;
 
-  ctx.drawImage(dieCanvas, 0, 0);
+    let base = svgDice[kind];
+    if (!base) {
+      base = svgDice[kind] = document.createElementNS(ns, 'g');
+      const data = dicePaths[kind];
 
-  ctx.fillStyle = classDieTextColor;
-  ctx.font = `${floor(size * 0.3)}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(value, floor(size / 2), floor(dicePaths[klass].text * size));
+      // try to get center to 0, 0
+      let mover = document.createElementNS(ns, 'g');
+      mover.setAttribute("transform", `translate(-212.5, -240)`);
+      base.appendChild(mover);
 
-  ctx.restore();
-}
+      const fill = document.createElementNS(ns, 'path');
+      fill.setAttribute("d", data.fill);
+      fill.setAttribute("fill", fillColor);
+      mover.appendChild(fill);
 
+      const stroke = document.createElementNS(ns, 'path');
+      stroke.setAttribute("d", data.stroke);
+      stroke.setAttribute("fill", strokeColor);
+      mover.appendChild(stroke);
 
-function drawD6Pips(ctx, cx, cy, size, value, dieColor="white", dotColor="black") {
-  ctx.save();
+      const text = document.createElementNS(ns, 'text');
+      text.setAttribute("x", data.textX);
+      text.setAttribute("y", data.textY);
+      text.setAttribute("alignment-baseline", "middle");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("fill", textColor);
+      text.style.fontFamily = "'Ubuntu Condensed-Regular', 'Ubuntu Condensed', sans-serif";
+      text.style.fontSize = "140px";
+      text.style.letterSpacing = "-10px";
+      text.classList.add("text"); // to not querySelect by namespace, sigh
+      mover.appendChild(text);
 
-  ctx.fillStyle = dieColor;
-  roundedRect(ctx, floor(cx - size / 2), floor(cy - size / 2), size, size,
-              floor(size / 10));
-  ctx.fill();
-
-  // based, ish, on https://codepen.io/rheajt/pen/MOMGKK
-
-  let dots = [];
-  switch (value) {
-    case 1: dots = ['cc']; break;
-    case 2: dots = ['nw', 'se']; break;
-    case 3: dots = ['nw', 'cc', 'se']; break;
-    case 4: dots = ['nw', 'ne', 'sw', 'se']; break;
-    case 5: dots = ['nw', 'ne', 'cc', 'sw', 'se']; break;
-    case 6: dots = ['nw', 'ne', 'cw', 'ce', 'sw', 'se']; break;
-    default: console.error(`Invalid d6 value ${value}`); return;
-  }
-
-  ctx.fillStyle = dotColor;
-  for (let loc of dots) {
-    let x, y;
-    switch (loc[0]) {
-      case 'n': y = cy - 0.25 * size; break;
-      case 'c': y = cy; break;
-      case 's': y = cy + 0.25 * size; break;
+      base.dataset.size = 425;
+      // const bbox = die.getBBox();
+      // base.dataset.size = Math.max(bbox.width, bbox.height);
+      base.classList.add("die");
     }
-    switch (loc[1]) {
-      case 'w': x = cx - 0.25 * size; break;
-      case 'c': x = cx; break;
-      case 'e': x = cx + 0.25 * size; break;
-    }
-    ctx.beginPath();
-    ctx.arc(floor(x), floor(y), floor(size * 0.06) + 1, 0, 2 * Math.PI);
-    ctx.fill();
-  }
 
-  ctx.restore();
-}
+    let die = base.cloneNode(true);
+    die.querySelector('.text').innerHTML = value;
+    return die;
 
-let canvas, lastRoll;
-export function drawCanvas() {
-  if (!canvas) canvas = document.getElementById('canvas');
-  if (!canvas.getContext) return;
-  let ctx = canvas.getContext('2d');
+  } else {
+    if (!fillColor) fillColor = kind == "bad" ? "red" : "white";
+    if (!strokeColor) strokeColor = kind == "black";
+    if (!fillColor) fillColor = kind == "bad" ? "white" : "black";
 
-  let height = canvas.height, width = canvas.width;
+    let key = `${kind}-${value}`;
+    let base = svgDice[key];
+    if (!base) {
+      base = svgDice[key] = document.createElementNS(ns, 'g');
 
-  // draw table - TODO turn into an image or sth
-  let tabLeft = 0, tabTop = 0, tabWidth = width, tabHeight = height;
-  // let tabLeft = floor(width * 0.15), tabTop = floor(height * 0.5),
-  //     tabWidth = floor(width * 0.7), tabHeight = floor(height * 0.5);
-  let tabMidX = floor(tabLeft + tabWidth / 2),
-      tabMidY = floor(tabTop + tabHeight / 2);
-  roundedRect(ctx, tabLeft, tabTop, tabWidth, tabHeight, 20);
-  ctx.fillStyle = 'rgb(20, 112, 37)';
-  ctx.fill();
+      base.classList.add("die");
+      base.dataset.size = 100;
 
-  if (lastRoll) {
-    // TODO: wrap if too wide
-    const nRolls = lastRoll.rolls.length;
-    const sz = 100, pad = 0, w = sz + 2 * pad;
-    lastRoll.rolls.forEach((roll, i) => {
-      let x = tabMidX + w * (i - (nRolls - 1) / 2),
-          y = tabMidY;
-      if (roll.kind == "d6") {
-        drawD6Pips(ctx, x, y, sz * 0.7, roll.roll, "white", "black");
-      } else if (roll.kind == "bad") {
-        drawD6Pips(ctx, x, y, sz * 0.7, roll.roll, "#f55", "white");
-      } else {
-        drawDie(ctx, roll.kind, roll.roll, x, y, sz);
+      // want center at 0, 0
+      // slightly smaller than the fool d6
+      let width = 65, height = width, x = -width/2, y = x;
+
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute("x", x);
+      rect.setAttribute("y", y);
+      rect.setAttribute("width", width);
+      rect.setAttribute("height", height);
+      rect.setAttribute("rx", (height + width) / 20);
+      rect.setAttribute("fill", fillColor);
+      rect.setAttribute("stroke", strokeColor);
+      base.appendChild(rect);
+
+      let dots = [];
+      switch (value) {
+        case 1: dots = ['cc']; break;
+        case 2: dots = ['nw', 'se']; break;
+        case 3: dots = ['nw', 'cc', 'se']; break;
+        case 4: dots = ['nw', 'ne', 'sw', 'se']; break;
+        case 5: dots = ['nw', 'ne', 'cc', 'sw', 'se']; break;
+        case 6: dots = ['nw', 'ne', 'cw', 'ce', 'sw', 'se']; break;
+        default: console.error(`Invalid d6 value ${value}`); break;
       }
-    });
+
+      for (let loc of dots) {
+        let cx, cy;
+        switch (loc[0]) {
+          case 'n': cy = y + 0.25 * height; break;
+          case 'c': cy = y + 0.50 * height; break;
+          case 's': cy = y + 0.75 * height; break;
+        }
+        switch (loc[1]) {
+          case 'w': cx = x + 0.25 * width; break;
+          case 'c': cx = x + 0.50 * width; break;
+          case 'e': cx = x + 0.75 * width; break;
+        }
+        let dot = document.createElementNS(ns, 'circle');
+        dot.setAttribute("cx", cx);
+        dot.setAttribute("cy", cy);
+        dot.setAttribute("r", 0.035 * (height + width));
+        dot.setAttribute("fill", textColor);
+        base.appendChild(dot);
+      }
+    }
+
+    return base.cloneNode(true);
+  }
+}
+
+
+function drawDie(kind, value, cx, cy, size, fillColor, strokeColor, textColor) {
+  let die = getDie(kind, value, fillColor, strokeColor, textColor);
+  die.setAttribute("transform",
+    `translate(${cx}, ${cy}) scale(${size / die.dataset.size})`);
+  document.getElementById('svgfield').appendChild(die);
+  // TODO: fool die
+}
+
+
+let lastRoll;
+export function drawLastRoll() {
+  if (!lastRoll)
+    return;
+
+  let tabbox = document.getElementById('tablerect').getBBox(),
+      midX = tabbox.x + tabbox.width / 2,
+      midY = tabbox.y + tabbox.height / 2;
+
+  const nRolls = lastRoll.rolls.length;
+  let sz = 80, pad = 10, w = sz + 2 * pad;
+  let scale = tabbox.width / (w * nRolls);
+  if (scale < 1) {
+    sz = sz * scale;
+    pad = pad * scale;
+    w = w * scale;
   }
 
+  for (let d of document.querySelectorAll('#svgfield g.die')) {
+    d.remove();
+  }
+
+  lastRoll.rolls.forEach((roll, i) => {
+    let x = midX + w * (i - (nRolls - 1) / 2), y = midY;
+    drawDie(roll.kind, roll.roll, x, y, sz);
+  });
 }
-ready(drawCanvas);
+ready(drawLastRoll);
 
 
 export function setupResultLine(response) {
@@ -249,7 +290,7 @@ export function setupResultLine(response) {
 
 export function showRolls(response) {
   lastRoll = response;
-  drawCanvas();
+  drawLastRoll();
 
   let bodynode = setupResultLine(response);
   for (let roll of response.rolls) {
