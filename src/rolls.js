@@ -1,6 +1,7 @@
-import {ready, selectorValue} from './helpers';
 import escape from 'lodash/escape'; 
 import hotkeys from 'hotkeys-js';
+
+import {ready, selectorValue, toggleCheckbox} from './helpers';
 export {sidesByKind, classNames} from './game-data';
 
 export function username() {
@@ -288,15 +289,15 @@ hotkeys("`,b,c,d,f,k,n,g,m", (event, handler) => {
   let target = document.querySelector(`#dice img[data-kind="${kind}"]`);
   if (!target && kind != "bad") {
     target = document.querySelector(`#my-die`);
-    if (!target) {
-      target = document.querySelector('img[data-kind="master"]');
-    }
   }
-  if (target) {
+  if (target && !target.classList.contains("nodisplay")) {
     target.classList.toggle("selected");
   }
 });
 hotkeys('-', () => { document.getElementById('fewer-d6').click(); });
 hotkeys('=, shift+=', () => { document.getElementById('more-d6').click(); });
 hotkeys('enter', () => { roll(); });
+
+let allDice = document.getElementById('showAllDice');
+if (allDice) { hotkeys('a', () => { toggleCheckbox(allDice); }); }
 

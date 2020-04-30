@@ -125,9 +125,22 @@ ws.handlers.set("allowMultipleGMs", msg => {
     document.getElementById('allowMultipleGMs').checked = msg.value;
 });
 ready(() => {
-    let checkbox = document.getElementById('allowMultipleGMs');
-    checkbox.addEventListener('change', () => {
-        ws.send(JSON.stringify({action: 'allowMultipleGMs', value: checkbox.checked}));
+    let multiGMs = document.getElementById('allowMultipleGMs');
+    multiGMs.addEventListener('change', () => {
+        ws.send(JSON.stringify({action: 'allowMultipleGMs', value: multiGMs.checked}));
+    });
+
+    let allDice = document.getElementById('showAllDice');
+    allDice.addEventListener('change', () => {
+        let shown = allDice.checked;
+        for (let die of document.querySelectorAll('#my-dice img:not(#my-die)')) {
+            if (shown) {
+                die.classList.remove("nodisplay");
+            } else {
+                die.classList.add("nodisplay");
+                die.classList.remove("selected");
+            }
+        }
     });
 
     let emoteForm = document.getElementById('emote-form');
