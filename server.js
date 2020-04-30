@@ -623,7 +623,7 @@ function buildSocketServer(webserver) {
         return [i, getRollStatus(i)];
       }
     } else {
-      switch (user.foolDie.sides[i - 1]) {
+      switch (user.foolDie ? user.foolDie.sides[i - 1] : ".") {
         case "+":
           return [`<s>${i}</s> ${user.foolDie.posSymbol}`, `${getRollStatus(i)}`];
         case "-":
