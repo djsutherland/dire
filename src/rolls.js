@@ -297,7 +297,3 @@ hotkeys("`,b,c,d,f,k,n,g,m", (event, handler) => {
 hotkeys('-', () => { document.getElementById('fewer-d6').click(); });
 hotkeys('=, shift+=', () => { document.getElementById('more-d6').click(); });
 hotkeys('enter', () => { roll(); });
-
-let allDice = document.getElementById('showAllDice');
-if (allDice) { hotkeys('a', () => { toggleCheckbox(allDice); }); }
-

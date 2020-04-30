@@ -1,3 +1,5 @@
+import hotkeys from 'hotkeys-js';
+
 import {ready, selectorValue} from './helpers';
 import {ws, can_notify, username} from './rolls';
 import {foolEffects11} from './game-data';
@@ -157,3 +159,6 @@ ready(() => {
       textbox.value = textbox.dataset.default;
     });
 });
+
+
+hotkeys('a', () => { toggleCheckbox(document.getElementById(allDice)); });
