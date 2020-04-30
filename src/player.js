@@ -1,7 +1,9 @@
 import './dom-polyfills';
-import {ready, selectorValue} from './helpers';
 import range from 'lodash/range';
 import GraphemeSplitter from 'grapheme-splitter';
+
+import {foolEffects11} from './game-data';
+import {ready, selectorValue} from './helpers';
 import {ws, sidesByKind, classNames, selectedToggler} from './rolls';
 
 const splitter = new GraphemeSplitter();
@@ -90,9 +92,6 @@ function handleFool(msg, classId, controls) {
           Symbol:
           <select name="symbol">
             <option value="?" disabled>Choose a symbol</option>
-            <option value="X">X: Disarm a foe</option>
-            <option value="O">O: Knock a foe over; they lose all guard</option>
-            <option value="V">V: Inspire all allies to get advantage next round</option>
           </select>
         </label>
         on
@@ -109,7 +108,22 @@ function handleFool(msg, classId, controls) {
           </select>
         </label>
       `;
-      scribbler.querySelector(`select[name="symbol"] [value="${msg.foolDie.symbol}"]`).setAttribute("selected", true);
+      let symbsel = scribbler.querySelector(`select[name="symbol"]`);
+      let anySelected = false;
+      for (let [symb, effect] of Object.entries(foolEffects11)) {
+        let opt = document.createElement('option');
+        opt.innerHTML = `${symb}: ${effect}`;
+        opt.setAttribute('value', symb);
+        if (msg.foolDie.symbol == symb) {
+          opt.setAttribute("selected", true);
+          anySelected = true;
+        }
+        symbsel.append(opt);
+      }
+      if (!anySelected) {
+        symbsel.querySelector('option[value="?"]').setAttribute("selected", true);
+      }
+
       scribbler.querySelector(`select[name="side"] [value="${msg.foolDie.side}"]`).setAttribute("selected", true);
       scribbler.addEventListener('change', (event) => {
         event.preventDefault();

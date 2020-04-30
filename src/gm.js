@@ -1,5 +1,6 @@
 import {ready, selectorValue} from './helpers';
 import {ws, can_notify, username} from './rolls';
+import {foolEffects11} from './game-data';
 
 function sendAction(event, params) {
     ws.send(JSON.stringify(Object.assign(
@@ -46,7 +47,11 @@ function addFoolVariantSelector(user, extras) {
 
     if (user.foolVariant == "1.1") {
         let symb = document.createElement("span");
-        symb.innerHTML = user.foolDie.symbol;
+        symb.innerHTML = `${user.foolDie.side} → ${user.foolDie.symbol}`;
+        let effect = foolEffects11[user.foolDie.symbol];
+        if (effect) {
+            symb.setAttribute("title", effect);
+        }
         extras.appendChild(symb);
     } else {
         let summary = document.createElement("span");

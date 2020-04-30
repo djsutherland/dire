@@ -21,5 +21,12 @@ const classNames = {
   master: "the Master"
 };
 
+const foolEffects11 = {
+  X: "Disarm a foe",
+  O: "Knock a foe over; they lose all guard",
+  V: "Inspire all allies to get advantage next round",
+};
+
 exports.sidesByKind = sidesByKind;
 exports.classNames = classNames;
+exports.foolEffects11 = foolEffects11;

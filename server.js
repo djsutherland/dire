@@ -17,9 +17,6 @@ classNames = gameData.classNames;
 const foolDefaultGood = '😲';
 const foolDefaultBad = '💩';
 
-const siteName = 'DIRE, the DIE Internet Rolling Experience';
-
-
 const args = minimist(process.argv, {
   'default': {port: 5000, debug: false, db: './leveldb'},
   'boolean': ['debug'],
@@ -152,7 +149,7 @@ function buildExpressApp(sessionParser) {
     delete req.session.msg;
 
     res.render('index', {
-      title: siteName,
+      title: 'DIRE, the DIE Internet Rolling Experience',
       msg: msg,
     });
   });
@@ -229,7 +226,7 @@ function buildExpressApp(sessionParser) {
 
   app.get('/play/', loginRequired((req, res) => {
     res.render('player', {
-      title: `${siteName} - Playing`,
+      title: `DIRE - Playing`,
       username: req.session.username,
       role: 'player'
     });
@@ -247,7 +244,7 @@ function buildExpressApp(sessionParser) {
     }
 
     res.render('gm', {
-      title: `${siteName} – GMing`,
+      title: `DIRE – GMing`,
       username: req.session.username,
       role: 'GM',
       classNames: classNames,
@@ -628,9 +625,9 @@ function buildSocketServer(webserver) {
     } else {
       switch (user.foolDie.sides[i - 1]) {
         case "+":
-          return [user.foolDie.posSymbol, "special"];
+          return [`<s>${i}</s> ${user.foolDie.posSymbol}`, `${getRollStatus(i)}`];
         case "-":
-          return [user.foolDie.negSymbol, "specially-bad"];
+          return [`<s>${i}</s> ${user.foolDie.negSymbol}`, `${getRollStatus(i)}`];
         default:
           console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
           /* falls through */

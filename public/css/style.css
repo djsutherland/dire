@@ -67,6 +67,10 @@ main * {
     margin: 5px auto;
 }
 
+.extra-actions > * {
+    margin-left: 5px;
+}
+
 #roller {
     width: 100%;
     overflow-x: scroll;
