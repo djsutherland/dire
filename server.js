@@ -388,8 +388,8 @@ function buildSocketServer(webserver) {
     }
     switch (user.class) {
       case "fool":
-        if (user.foolDieWithGM === undefined) {
-          user.foolDieWithGM = false;
+        if (user.dieWithGM === undefined) {
+          user.dieWithGM = false;
         }
         if (user.foolVariant === undefined) {
           user.foolVariant = "1.1";
@@ -430,9 +430,12 @@ function buildSocketServer(webserver) {
     };
     switch (user.class) {
       case "fool":
-        res.foolDieWithGM = user.foolDieWithGM;
+        res.dieWithGM = user.dieWithGM;
         res.foolVariant = user.foolVariant;
         res.foolDie = user.foolDie;
+        break;
+      case "dictator":
+        res.dieWithGM = user.dieWithGM;
         break;
     }
     return res;
@@ -448,21 +451,22 @@ function buildSocketServer(webserver) {
   }
 
 
-  function checkUserAttr(attrname, attrval, fn) {
+  function checkUserAttr(attrname, test, fn) {
     return (data, source) => {
       let user = userData.get(source.username);
       fillDefaults(user);
-      if (user[attrname] !== attrval) {
+      if (!test(user[attrname])) {
         console.error(
-          `Bad attempt by ${user.username} (${attrname} = ${user[attrname]}, expected ${attrval}):`,
+          `Bad attempt by ${user.username} (${attrname} = ${user[attrname]}):`,
           data);
         return;
       }
       fn(user, data, source);
     };
   }
-  checkUserClass = (cls, fn) => checkUserAttr("class", cls, fn);
-  checkUserIsGM = fn => checkUserAttr("role", "GM", fn);
+  checkUserClass = (cls, fn) => checkUserAttr("class", c => c == cls, fn);
+  checkUserClassIn = (classes, fn) => checkUserAttr("class", c => classes.includes(c), fn);
+  checkUserIsGM = fn => checkUserAttr("role", r => r == "GM", fn);
 
 
   // the core of the server
@@ -568,33 +572,34 @@ function buildSocketServer(webserver) {
     }
   }));
 
-  handlers.set("fool-hand-die", checkUserClass('fool', (user, data, source) => {
-    if (!user.foolDieWithGM) {
-      user.foolDieWithGM = true;
+  let dieHanders = ['fool', 'dictator'];
+  handlers.set("player-hand-die", checkUserClassIn(dieHanders, (user, data, source) => {
+    if (!user.dieWithGM) {
+      user.dieWithGM = true;
       sendAction(user, {action: 'user-status', text: `${user.username} handed their die to the GM.`});
       refreshUserData(user);
     }
   }));
-  handlers.set("fool-take-die", checkUserClass('fool', (user, data, source) => {
-    if (user.foolDieWithGM) {
-      user.foolDieWithGM = false;
+  handlers.set("player-take-die", checkUserClassIn(dieHanders, (user, data, source) => {
+    if (user.dieWithGM) {
+      user.dieWithGM = false;
       sendAction(user, {action: 'user-status', text: `${user.username} took their die back from the GM.`});
       refreshUserData(user);
     }
   }));
 
-  handlers.set("take-fool-die", checkUserIsGM((doer, data, source) => {
+  handlers.set("gm-take-die", checkUserIsGM((doer, data, source) => {
     let user = userData.get(data.username);
-    if (!user.foolDieWithGM) {
-      user.foolDieWithGM = true;
+    if (dieHanders.includes(user.class) && !user.dieWithGM) {
+      user.dieWithGM = true;
       sendAction(doer, {action: 'user-status', text: `The GM took ${user.username}'s die.`});
       refreshUserData(user);
     }
   }));
-  handlers.set("give-fool-die", checkUserIsGM((doer, data, source) => {
+  handlers.set("gm-return-die", checkUserIsGM((doer, data, source) => {
     let user = userData.get(data.username);
-    if (user.foolDieWithGM) {
-      user.foolDieWithGM = false;
+    if (dieHanders.includes(user.class) && user.dieWithGM) {
+      user.dieWithGM = false;
       sendAction(doer, {action: 'user-status', text: `The GM gave ${user.username} back their die.`});
       refreshUserData(user);
     }

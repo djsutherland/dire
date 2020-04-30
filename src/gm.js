@@ -14,13 +14,56 @@ function setClass(event) {
 function setFoolVariant(event) {
     sendAction(event, {action: "fool-set-variant", foolVariant: selectorValue(event.target)});
 }
-function setFoolHasDie(event) {
+function setHasDie(event) {
     sendAction(event, {
-        action: event.target.checked ? "take-fool-die" : "give-fool-die",
+        action: event.target.checked ? "gm-take-die" : "gm-return-die",
     });
 }
 function sendKick(event) { sendAction(event, {action: "kick"}); }
 function sendDelete(event) { sendAction(event, {action: "delete"}); }
+
+function addHasDie(user, extras) {
+    let label = document.createElement('label');
+    label.innerHTML = `
+        GM has die:
+        <input type="checkbox" name="GM-has-die" ${user.dieWithGM ? "checked" : ""}>
+    `;
+    label.querySelector('input').addEventListener("change", setHasDie);
+    extras.append(label);
+}
+
+function addFoolVariantSelector(user, extras) {
+    let sel = document.createElement('select');
+    sel.setAttribute("name", "foolVariant");
+    sel.innerHTML = `
+        <option value="1.1">1.1</option>
+        <option value="1.2">1.2</option>
+    `;
+
+    sel.querySelector(`[value="${user.foolVariant}"]`).setAttribute("selected", true);
+    sel.addEventListener("change", setFoolVariant);
+    extras.appendChild(sel);
+
+    if (user.foolVariant == "1.1") {
+        let symb = document.createElement("span");
+        symb.innerHTML = user.foolDie.symbol;
+        extras.appendChild(symb);
+    } else {
+        let summary = document.createElement("span");
+        let n_pos = 0, n_neg = 0;
+        for (let v of user.foolDie.sides) {
+            if (v == '+') {
+                n_pos++;
+            } else if (v == '-') {
+                n_neg++;
+            }
+        }
+        summary.innerHTML = `(${n_pos} good, ${n_neg} bad)`;
+        summary.setAttribute("title", user.foolDie.effect);
+        extras.appendChild(summary);
+    }
+}
+
 
 ws.handlers.set("users", msg => {
     let me = username();
@@ -54,42 +97,12 @@ ws.handlers.set("users", msg => {
                    .setAttribute("selected", "selected");
         }
 
+        let extras = tr.querySelector('.extra-actions');
         if (user.class === "fool") {
-            let extras = tr.querySelector('.extra-actions');
-            extras.innerHTML = `
-                <select name="foolVariant">
-                    <option value="1.1">1.1</option>
-                    <option value="1.2">1.2</option>
-                </select>
-                <label>
-                    GM has die:
-                    <input type="checkbox" name="GM-has-die" ${user.foolDieWithGM ? "checked" : ""}>
-                </label>
-            `;
-            let sel = extras.querySelector('select[name="foolVariant"]');
-            sel.querySelector(`[value="${user.foolVariant}"]`).setAttribute("selected", true);
-            sel.addEventListener("change", setFoolVariant);
-
-            extras.querySelector('[name="GM-has-die"]').addEventListener("change", setFoolHasDie);
-
-            if (user.foolVariant == "1.1") {
-                let symb = document.createElement("span");
-                symb.innerHTML = user.foolDie.symbol;
-                extras.appendChild(symb);
-            } else {
-                let summary = document.createElement("span");
-                let n_pos = 0, n_neg = 0;
-                for (let v of user.foolDie.sides) {
-                    if (v == '+') {
-                        n_pos++;
-                    } else if (v == '-') {
-                        n_neg++;
-                    }
-                }
-                summary.innerHTML = `(${n_pos} good, ${n_neg} bad)`;
-                summary.setAttribute("title", user.foolDie.effect);
-                extras.appendChild(summary);
-            }
+            addHasDie(user, extras);
+            addFoolVariantSelector(user, extras);
+        } else if (user.class === "dictator") {
+            addHasDie(user, extras);
         }
 
         tbody.appendChild(tr);

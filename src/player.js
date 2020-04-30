@@ -9,7 +9,7 @@ const splitter = new GraphemeSplitter();
 function hasDie(user) {
   if (!sidesByKind[user.class])
     return false;
-  if (user.class === "fool" && user.foolDieWithGM)
+  if (user.dieWithGM)
     return false;
   return true;
 }
@@ -46,6 +46,10 @@ ws.handlers.set("getUserData", msg => {
   }
 
   switch (msg.class) {
+    case "dictator":
+      handleDieTaking(msg, classId, controls);
+      break;
+
     case "fool":
       handleFool(msg, classId, controls);
       break;
@@ -56,23 +60,28 @@ ws.handlers.set("getUserData", msg => {
   }
 });
 
-function handleFool(msg, classId, controls) {
-  if (msg.foolDieWithGM) {
+function handleDieTaking(msg, classId, controls) {
+  if (msg.dieWithGM) {
     classId.innerHTML = classId.innerHTML.trim().slice(0, -1) + ', but the GM has your die.';
 
     controls.innerHTML = `
       <button id="take-die">Take die back from the GM</button>
     `;
     controls.querySelector("#take-die").addEventListener("click", () => {
-      ws.send(JSON.stringify({action: "fool-take-die"}));
+      ws.send(JSON.stringify({action: "player-take-die"}));
     });
-
   } else {
     controls.innerHTML = '<button id="hand-die">Hand the GM your die</button>';
     controls.querySelector("#hand-die").addEventListener("click", () => {
-      ws.send(JSON.stringify({action: "fool-hand-die"}));
+      ws.send(JSON.stringify({action: "player-hand-die"}));
     });
+  }
+}
 
+function handleFool(msg, classId, controls) {
+  handleDieTaking(msg, classId, controls);
+
+  if (!msg.dieWithGM) {
     let scribbler = document.createElement('form');
     scribbler.setAttribute('id', 'die-scribbler');
     if (msg.foolVariant == "1.1") {
