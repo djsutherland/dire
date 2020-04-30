@@ -108,7 +108,7 @@ const classDieFill = "purple",
       classDieTextColor = "rgb(230,170,100)";
 
 let svgDice = {};
-function getDie(kind, value, fillColor, strokeColor, textColor) {
+function getDie(kind, value, display, fillColor, strokeColor, textColor) {
   const svg = document.getElementById('svgfield'),
         ns = svg.getAttribute("xmlns");
 
@@ -121,6 +121,10 @@ function getDie(kind, value, fillColor, strokeColor, textColor) {
     if (!base) {
       base = svgDice[kind] = document.createElementNS(ns, 'g');
       const data = dicePaths[kind];
+
+      const title = document.createElementNS(ns, 'title');
+      title.classList.add('title');
+      base.appendChild(title);
 
       // try to get center to 0, 0
       let mover = document.createElementNS(ns, 'g');
@@ -156,7 +160,8 @@ function getDie(kind, value, fillColor, strokeColor, textColor) {
     }
 
     let die = base.cloneNode(true);
-    die.querySelector('.text').innerHTML = value;
+    die.querySelector('.text').innerHTML = display;
+    die.querySelector('.title').innerHTML = value;
     return die;
 
   } else {
@@ -171,6 +176,11 @@ function getDie(kind, value, fillColor, strokeColor, textColor) {
 
       base.classList.add("die");
       base.dataset.size = 100;
+
+      const title = document.createElementNS(ns, 'title');
+      title.classList.add('title');
+      title.innerHTML = value;
+      base.appendChild(title);
 
       // want center at 0, 0
       // slightly smaller than the fool d6
@@ -223,12 +233,12 @@ function getDie(kind, value, fillColor, strokeColor, textColor) {
 }
 
 
-function drawDie(kind, value, cx, cy, size, fillColor, strokeColor, textColor) {
-  let die = getDie(kind, value, fillColor, strokeColor, textColor);
+function drawDie(roll, cx, cy, size, fillColor, strokeColor, textColor) {
+  let die = getDie(roll.kind, roll.roll, roll.display || roll.roll,
+                   fillColor, strokeColor, textColor);
   die.setAttribute("transform",
     `translate(${cx}, ${cy}) scale(${size / die.dataset.size})`);
   document.getElementById('svgfield').appendChild(die);
-  // TODO: fool die
 }
 
 
@@ -256,7 +266,7 @@ export function drawLastRoll() {
 
   lastRoll.rolls.forEach((roll, i) => {
     let x = midX + w * (i - (nRolls - 1) / 2), y = midY;
-    drawDie(roll.kind, roll.roll, x, y, sz);
+    drawDie(roll, x, y, sz);
   });
 }
 ready(drawLastRoll);
