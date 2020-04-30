@@ -300,6 +300,18 @@ function buildSocketServer(webserver) {
         yield client;
   };
 
+  socketserver.tellAllOne = function (msg, test=() => true) {
+    if (args.debug)
+      console.log(`Broadcasting:`, msg);
+
+    let str = JSON.stringify([msg]);
+    for (let client of this.activeClients()) {
+      if (test(userData.get(client.username), client)) {
+        client.send(str);
+      }
+    }
+  };
+
   socketserver.tellGMsOne = function(msg) {
     if (args.debug)
       console.log(`Broadcasting to GMs:`, msg);
@@ -336,25 +348,19 @@ function buildSocketServer(webserver) {
   // Some helpers
 
   function sendAction(user, result) {
-    let act = Object.assign({
+    let a = Object.assign({
       username: user.username,
       role: user.role,
       time: Date.now(),
     }, result);
 
-    actionsLog.push(act);
-    db.put(`actions/${actionsLog.length - 1}`, JSON.stringify(act));
+    actionsLog.push(a);
+    db.put(`actions/${actionsLog.length - 1}`, JSON.stringify(a));
     db.put('n-actions', actionsLog.length);
 
-    if (args.debug)
-      console.log(`Broadcasting action:`, act);
-
-    let msg = JSON.stringify([act]);
-    for (let client of socketserver.activeClients()) {
-      if (!act.private || client.role === "GM" || client.username === act.username) {
-        client.send(msg);
-      }
-    }
+    socketserver.tellAllOne(
+      a,
+      a.private ? u => (u.role == "GM" || u.username == a.username) : undefined);
   }
 
   function sendUserOne(user, msg) {
@@ -367,7 +373,7 @@ function buildSocketServer(webserver) {
     }
   }
 
-  function tellGMsAboutUsers() {
+  function tellAboutUsers() {
     let userInfo = [];
     for (let user of userData.values()) {
       let res = userDataForSending(user);
@@ -440,7 +446,7 @@ function buildSocketServer(webserver) {
 
   function refreshUserData(user) {
     sendUserOne(user, Object.assign({action: "getUserData"}, userDataForSending(user)));
-    tellGMsAboutUsers();
+    tellAboutUsers();
 
     db.put('usernames', JSON.stringify([...userData.keys()]));
     db.put(`users/${user.username}`, JSON.stringify(
@@ -481,7 +487,7 @@ function buildSocketServer(webserver) {
       refreshUserData(user);
       theLog = _.filter(actionsLog, e => !e.private || e.username === user.username);
     } else {
-      tellGMsAboutUsers();
+      tellAboutUsers();
       theLog = actionsLog;
     }
 
@@ -682,7 +688,7 @@ function buildSocketServer(webserver) {
     }
 
     userData.delete(data.username);
-    tellGMsAboutUsers();
+    tellAboutUsers();
     db.del(`users/${data.username}`);
     db.put('usernames', JSON.stringify([...userData.keys()]));
   }));
@@ -709,7 +715,7 @@ function buildSocketServer(webserver) {
       }
     });
     ws.on('close', e => {
-      tellGMsAboutUsers();
+      tellAboutUsers();
     });
     ws.on('error', e => {
       switch (e.code) {
