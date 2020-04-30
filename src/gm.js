@@ -130,24 +130,27 @@ ws.handlers.set("users", msg => {
 ws.handlers.set("allowMultipleGMs", msg => {
     document.getElementById('allowMultipleGMs').checked = msg.value;
 });
+
+function updateAllDice() {
+    let shown = document.getElementById('showAllDice').checked;
+    for (let die of document.querySelectorAll('#my-dice img:not(#my-die)')) {
+        if (shown) {
+            die.classList.remove("nodisplay");
+        } else {
+            die.classList.add("nodisplay");
+            die.classList.remove("selected");
+        }
+    }
+}
+
+
 ready(() => {
     let multiGMs = document.getElementById('allowMultipleGMs');
     multiGMs.addEventListener('change', () => {
         ws.send(JSON.stringify({action: 'allowMultipleGMs', value: multiGMs.checked}));
     });
 
-    let allDice = document.getElementById('showAllDice');
-    allDice.addEventListener('change', () => {
-        let shown = allDice.checked;
-        for (let die of document.querySelectorAll('#my-dice img:not(#my-die)')) {
-            if (shown) {
-                die.classList.remove("nodisplay");
-            } else {
-                die.classList.add("nodisplay");
-                die.classList.remove("selected");
-            }
-        }
-    });
+    document.getElementById('showAllDice').addEventListener('change', updateAllDice);
 
     let emoteForm = document.getElementById('emote-form');
     emoteForm.addEventListener('submit', (event) => {
@@ -161,4 +164,8 @@ ready(() => {
 });
 
 
-hotkeys('a', () => { toggleCheckbox(document.getElementById(allDice)); });
+hotkeys('a', () => {
+    let box = document.getElementById('showAllDice');
+    box.checked = !box.checked;
+    updateAllDice();
+});

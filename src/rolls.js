@@ -1,7 +1,7 @@
 import escape from 'lodash/escape'; 
 import hotkeys from 'hotkeys-js';
 
-import {ready, selectorValue, toggleCheckbox} from './helpers';
+import {ready, selectorValue} from './helpers';
 export {sidesByKind, classNames} from './game-data';
 
 export function username() {
