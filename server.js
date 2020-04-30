@@ -524,6 +524,14 @@ function buildSocketServer(webserver) {
         case "knight":
           res.status = "n/a";
           break;
+        case "neo":
+          if (res.roll == 10) {
+            res.status = "special neo-break";
+            // TODO: is a 0 >= 6?
+          } else {
+            res.status = getRollStatus(res.roll);
+          }
+          break;
         default:
           res.status = getRollStatus(res.roll);
           break;

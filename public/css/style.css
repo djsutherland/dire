@@ -194,14 +194,14 @@ main * {
 .roll:not([data-kind="d6"]):not([data-kind="bad"]) { color: purple; }
 .roll:not([data-kind="d6"]):not([data-kind="bad"]) .label {  }
 
-.roll[data-status="success"], .roll[data-status="special"] { background-color: #f1adff; }
-.roll[data-kind="d6"][data-status="success"], .roll[data-kind="d6"][data-status="special"] {
+.roll[data-status="success"], .roll[data-status~="special"] { background-color: #f1adff; }
+.roll[data-kind="d6"][data-status~="success"], .roll[data-kind="d6"][data-status~="special"] {
     background-color: #ddf;
 }
 
-.roll[data-status="special"] { border: 2px dashed black; }
+.roll[data-status~="neo-break"] { background-color: #b08; color: #ddd !important; }
+.roll[data-status~="special"] { border: 2px dashed black; }
 .roll[data-status="n/a"] { border: 1px dotted black; }
 .roll[data-status="fail-threat"] { border: 1px dotted red; }
-.roll[data-status="specially-bad"] { border: 2px solid red; }
 
 .roll[data-status="badness"] { background-color: #fcc; }
