@@ -149,7 +149,7 @@ function buildExpressApp(sessionParser) {
     delete req.session.msg;
 
     res.render('index', {
-      title: 'DIRE, the DIE Internet Rolling Experience',
+      title: 'DIRE: the DIE Internet Rolling Experience',
       msg: msg,
     });
   });
