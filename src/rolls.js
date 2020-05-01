@@ -167,7 +167,7 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
   } else {
     if (!fillColor) fillColor = kind == "bad" ? "red" : "white";
     if (!strokeColor) strokeColor = kind == "black";
-    if (!fillColor) fillColor = kind == "bad" ? "white" : "black";
+    if (!textColor) textColor = kind == "bad" ? "white" : "black";
 
     let key = `${kind}-${value}`;
     let base = svgDice[key];
