@@ -1,5 +1,4 @@
 import cryptoRandomString from 'crypto-random-string';
-import graphemeSplitter from 'grapheme-splitter';
 import express from 'express';
 import session from 'express-session';
 import fs from 'fs';
@@ -18,6 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import {sidesByKind, classNames, getEmoLevel} from './src/game-data.mjs';
+import {splitGraphemes} from './src/grapheme-splitter.mjs'
 import {capFirst} from './src/helpers.mjs';
 
 const foolDefaultGood = '😲';
