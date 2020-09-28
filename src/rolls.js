@@ -2,7 +2,7 @@ import escape from 'lodash/escape';
 import hotkeys from 'hotkeys-js';
 const floor = Math.floor, ceil = Math.ceil;
 
-import {ready, selectorValue} from './helpers';
+import {ready, selectorValue, pageHidden} from './helpers';
 import {sidesByKind, classNames, dicePaths} from './game-data';
 export {sidesByKind, classNames} from './game-data';
 
@@ -312,6 +312,13 @@ export function showRolls(response) {
     child.innerHTML = `<span class="label">d${roll.sides}:</span>
                        <span class="value">${roll.display || roll.roll}</span>`;
     bodynode.appendChild(child);
+  }
+
+  if (can_notify && pageHidden()) {
+    new Notification(`${response.username} rolled`, {
+      body: response.rolls.map(r => r.display || r.roll).join(' '),
+      silent: true,
+    });
   }
 }
 

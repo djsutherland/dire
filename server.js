@@ -354,15 +354,17 @@ function buildSocketServer(webserver) {
       username: user.username,
       role: user.role,
       time: Date.now(),
+      live: true,
     }, result);
-
-    actionsLog.push(a);
-    db.put(`actions/${actionsLog.length - 1}`, JSON.stringify(a));
-    db.put('n-actions', actionsLog.length);
 
     socketserver.tellAllOne(
       a,
       a.private ? u => (u.role == "GM" || u.username == a.username) : undefined);
+
+    a.live = false;
+    actionsLog.push(a);
+    db.put(`actions/${actionsLog.length - 1}`, JSON.stringify(a));
+    db.put('n-actions', actionsLog.length);
   }
 
   function sendUserOne(user, msg) {

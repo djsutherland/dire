@@ -20,3 +20,13 @@ export function toggleCheckbox(checkbox) {
         checkbox.fireEvent("onchange");
     }
 }
+
+export function pageHidden(def = true) {
+  // https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
+  for (let hidden of ["hidden", "msHidden", "webkitHidden"]) {
+    if (typeof document[hidden] !== "undefined") {
+      return document[hidden];
+    }
+  }
+  return def;
+}
