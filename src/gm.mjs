@@ -62,15 +62,25 @@ function addKnightInfo(user, extras) {
     });
     extras.appendChild(kind);
 
-    let level = document.createElement('level');
+    let level = document.createElement('label');
     level.innerHTML = 'Level: <select></select>';
     let levelSel = level.querySelector('select');
     fillKnightLevelSelector(levelSel, user.emoKind, user.emoLevel);
-    level.addEventListener('change', (event) => {
+    levelSel.addEventListener('change', (event) => {
         ws.send(JSON.stringify({action: "set-knight-level", username: user.username,
                                 emoLevel: selectorValue(levelSel)}));
     });
     extras.appendChild(level);
+
+    let max = document.createElement('label');
+    max.innerHTML = `Max creative violence: <input type="number" size="2" min="0" max="6"
+                                             value="${user.maxViolence}">`;
+    let maxInput = max.querySelector('input');
+    maxInput.addEventListener('change', (event) => {
+        ws.send(JSON.stringify({action: "set-knight-max-violence", username: user.username,
+                                maxViolence: parseInt(maxInput.value, 10)}));
+    });
+    extras.appendChild(max);
 }
 
 

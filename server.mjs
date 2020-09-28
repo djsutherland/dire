@@ -422,6 +422,9 @@ function buildSocketServer(webserver) {
         if (user.emoLevel === undefined) {
           user.emoLevel = 0;
         }
+        if (user.maxViolence === undefined) {
+          user.maxViolence = 2;
+        }
         break;
     }
   }
@@ -446,6 +449,7 @@ function buildSocketServer(webserver) {
       case "knight":
         res.emoKind = user.emoKind;
         res.emoLevel = user.emoLevel;
+        res.maxViolence = user.maxViolence;
         break;
     }
     return res;
@@ -690,6 +694,15 @@ function buildSocketServer(webserver) {
     sendAction(doer, {
       action: 'user-status',
       text: `${user.username}'s ${capFirst(user.emoKind)} is now level ${user.emoLevel}: ${s}`});
+    refreshUserData(user);
+  }));
+
+  handlers.set("set-knight-max-violence", checkTargetClass('knight', (user, doer, data, source) => {
+    user.maxViolence = data.maxViolence;
+    sendAction(doer, {
+      action: 'user-status',
+      private: true,
+      text: `${user.username} can now do Creative Violence up to level ${user.maxViolence}.`});
     refreshUserData(user);
   }));
 

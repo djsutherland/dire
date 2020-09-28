@@ -89,13 +89,24 @@ function handleDieTaking(msg, classId, controls) {
 function handleKnight(msg, classId, controls) {
   controls.innerHTML = `
     <label>Sacred Emotion: <select id="emoKind" name="emoKind"></select></label>
-    <label>Level: <select id="emoLevel" name="emoLevel"></select></label>
+    <label>
+      Max creative violence level:
+      <input id="maxViolence" type="number" size="2" min="0" max="6" value="${msg.maxViolence}">
+    </label>
+    <br>
+    <label>Current emotional level: <select id="emoLevel" name="emoLevel"></select></label>
     <br><span id="emoCapabilities"></span>
   `;
   let kind = controls.querySelector('#emoKind');
   fillKnightKindSelector(kind, msg.emoKind);
   kind.addEventListener('change', (event) => {
     ws.send(JSON.stringify({action: "set-knight-kind", emoKind: selectorValue(kind)}));
+  });
+
+  let max = controls.querySelector('#maxViolence');
+  max.addEventListener('change', (event) => {
+      ws.send(JSON.stringify({action: "set-knight-max-violence",
+                              maxViolence: parseInt(max.value, 10)}));
   });
 
   let level = controls.querySelector('#emoLevel');
@@ -105,7 +116,18 @@ function handleKnight(msg, classId, controls) {
                             emoLevel: parseInt(selectorValue(level), 10)}));
   });
 
-  controls.querySelector('#emoCapabilities').innerHTML = emoLevels[msg.emoLevel][1];
+  let caps = [], defeatable = [];
+  for (let i = 0; i <= msg.emoLevel; i++) {
+    let [name, simples, defs] = emoLevels[i];
+    caps.push(...simples);
+    if (i <= msg.maxViolence) {
+      defeatable.push(...defs);
+    }
+  }
+  if (defeatable.length > 0) {
+    caps.push(`You could defeat: ${defeatable.join(", ")}.`);
+  }
+  controls.querySelector('#emoCapabilities').innerHTML = caps.join("<br>");
 }
 
 function handleFool(msg, classId, controls) {

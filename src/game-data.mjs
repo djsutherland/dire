@@ -41,16 +41,16 @@ for (const spoke in emoWheel) {
 }
 
 export const emoLevels = {
-  0: ["Nothing", ""],
-  1: ["Level 1", "Greater and lesser abilities available; advantage on attacks with your weapon."],
-  2: ["Level 2", "You could defeat: a mob, a blockage, a village, a weakness."],
-  3: ["Level 3", "You could defeat: an army, a mountain range, a town."],
-  4: ["Lost", "You can defeat: a city, despair, someone you truly love."],
-  5: ["Consumed", "You can defeat: a country, a religion."],
-  6: ["Inhuman", "You can defeat: a god, hope, yourself."],
-  7: ["Inhuman", "You can defeat: a god, hope, yourself."],
-  8: ["Inhuman", "You can defeat: a god, hope, yourself."],
-  9: ["Inhuman", "You can defeat: a god, hope, yourself."],
+  0: ["Nothing", [], []],
+  1: ["Level 1", ["Greater and lesser abilities available; advantage on attacks with your weapon."], []],
+  2: ["Level 2", [], ["a mob", "a blockage", "a village", "a weakness"]],
+  3: ["Level 3", [], ["an army", "a mountain range", "a town"]],
+  4: ["Lost",    [], ["a city", "despair", "someone you truly love"]],
+  5: ["Consumed",[], ["a country", "a religion"]],
+  6: ["Inhuman", [], ["a god", "hope", "yourself"]],
+  7: ["Inhuman", [], []],
+  8: ["Inhuman", [], []],
+  9: ["Inhuman", [], []],
 };
 
 export function getEmoLevel(emoKind, emoLevel) {
