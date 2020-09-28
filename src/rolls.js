@@ -373,11 +373,23 @@ export function showSafety(response) {
 export function showChat(response) {
   let bodynode = setupResultLine(response);
   bodynode.innerHTML = escape(response.text);
+
+  if (response.live && can_notify && pageHidden()) {
+    new Notification(`Chat from ${response.username}`, {
+      body: bodynode.innerHTML,
+    });
+  }
 }
 
 export function showUserStatus(response) {
   let bodynode = setupResultLine(response);
   bodynode.innerHTML = escape(response.text);
+
+  if (response.live && can_notify && pageHidden()) {
+    new Notification(`Update from ${response.username}`, {
+      body: bodynode.innerHTML,
+    });
+  }
 }
 
 export function getKicked(msg, ws) {
