@@ -398,29 +398,13 @@ function buildSocketServer(webserver) {
         if (user.dieWithGM === undefined) {
           user.dieWithGM = false;
         }
-        if (user.foolVariant === undefined) {
-          user.foolVariant = "1.2";
-        }
         if (user.foolDie === undefined) {
-          if (user.foolVariant == "1.1") {
-            user.foolDie = {
-              symbol: "?",
-              side: 0,
-            };
-          } else {
-            if (user.foolVariant != "1.2") {
-              if (user.foolVariant) {
-                console.error(`Unknown fool variant ${user.foolVariant}; assuming 1.2`);
-              }
-              user.foolVariant = "1.2";
-            }
-            user.foolDie = {
-              posSymbol: foolDefaultGood,
-              negSymbol: foolDefaultBad,
-              sides: [".", ".", ".", ".", ".", "."],
-              effect: "Your opponent gets talking and confesses something useful to you.",
-            };
-          }
+          user.foolDie = {
+            posSymbol: foolDefaultGood,
+            negSymbol: foolDefaultBad,
+            sides: [".", ".", ".", ".", ".", "."],
+            effect: "Your opponent gets talking and confesses something useful to you.",
+          };
         }
         break;
       case "dictator":
@@ -443,7 +427,6 @@ function buildSocketServer(webserver) {
     switch (user.class) {
       case "fool":
         res.dieWithGM = user.dieWithGM;
-        res.foolVariant = user.foolVariant;
         res.foolDie = user.foolDie;
         break;
       case "dictator":
@@ -533,7 +516,7 @@ function buildSocketServer(webserver) {
           res.status = res.roll >= 4 ? "badness" : "nothing";
           break;
         case "fool":
-          [res.display, res.status] = getFoolDisplay(user, res.roll);
+          [res.symbol, res.status] = getFoolDisplay(user, res.roll);
           break;
         case "dictator":
         case "knight":
@@ -583,15 +566,6 @@ function buildSocketServer(webserver) {
     refreshUserData(target);
   }));
 
-  handlers.set("fool-set-variant", checkUserIsGM((doer, data, source) => {
-    let target = userData.get(data.username);
-    if (target.foolVariant != data.foolVariant) {
-      target.foolVariant = data.foolVariant;
-      delete target.foolDie;  // different format...
-      refreshUserData(target);
-    }
-  }));
-
   let dieHanders = ['fool', 'dictator'];
   handlers.set("player-hand-die", checkUserClassIn(dieHanders, (user, data, source) => {
     if (!user.dieWithGM) {
@@ -639,46 +613,30 @@ function buildSocketServer(webserver) {
 
   function getFoolDisplay(user, i) {
     fillDefaults(user);
-    if (user.foolVariant == "1.1") {
-      if (i == user.foolDie.side) {
-        return [user.foolDie.symbol, "special"];
-      } else {
-        return [i, getRollStatus(i)];
-      }
-    } else {
-      switch (user.foolDie ? user.foolDie.sides[i - 1] : ".") {
-        case "+":
-          return [user.foolDie.posSymbol, `${getRollStatus(i)}`];
-        case "-":
-          return [user.foolDie.negSymbol, `${getRollStatus(i)}`];
-        default:
-          console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
-          /* falls through */
-        case ".":
-          return [i, getRollStatus(i)];
-      }
+    switch (user.foolDie ? user.foolDie.sides[i - 1] : ".") {
+      case "+":
+        return [user.foolDie.posSymbol, getRollStatus(i)];
+      case "-":
+        return [user.foolDie.negSymbol, getRollStatus(i)];
+      default:
+        console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
+        /* falls through */
+      case ".":
+        return [undefined, getRollStatus(i)];
     }
   }
 
   handlers.set("fool-set-die", checkUserClass('fool', (user, data, source) => {
-    let extraText = '';
-    if (user.foolVariant == "1.1") {
-      user.foolDie = {
-        symbol: checkFoolSymbol(data.symbol),
-        side: data.side,
-      };
-    } else {
-      user.foolDie = {
-        posSymbol: checkFoolSymbol(data.posSymbol),
-        negSymbol: checkFoolSymbol(data.negSymbol, foolDefaultBad),
-        sides: data.sides,
-        effect: data.effect.trim(),
-      };
-      extraText = ` Effect: ${user.foolDie.effect}`;
-    }
+    user.foolDie = {
+      posSymbol: checkFoolSymbol(data.posSymbol),
+      negSymbol: checkFoolSymbol(data.negSymbol, foolDefaultBad),
+      sides: data.sides,
+      effect: data.effect.trim(),
+    };
 
     let valDisplay = _.range(6).map(i => getFoolDisplay(user, i + 1)[0]);
-    let text = `${user.username} scribbled on their die: ${valDisplay.join(" / ")}.` + extraText;
+    let text = `${user.username} scribbled on their die: ` +
+               `${valDisplay.join(" / ")}. Effect: ${user.foolDie.effect}`;
     sendAction(user, {action: 'user-status', text: text, private: true});
     refreshUserData(user);
   }));

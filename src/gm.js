@@ -14,9 +14,6 @@ function sendAction(event, params) {
 function setClass(event) {
     sendAction(event, {action: "set-class", class: selectorValue(event.target)});
 }
-function setFoolVariant(event) {
-    sendAction(event, {action: "fool-set-variant", foolVariant: selectorValue(event.target)});
-}
 function setHasDie(event) {
     sendAction(event, {
         action: event.target.checked ? "gm-take-die" : "gm-return-die",
@@ -35,44 +32,23 @@ function addHasDie(user, extras) {
     extras.append(label);
 }
 
-function addFoolVariantSelector(user, extras) {
-    let sel = document.createElement('select');
-    sel.setAttribute("name", "foolVariant");
-    sel.innerHTML = `
-        <option value="1.1">1.1</option>
-        <option value="1.2">1.2</option>
-    `;
-
-    sel.querySelector(`[value="${user.foolVariant}"]`).setAttribute("selected", true);
-    sel.addEventListener("change", setFoolVariant);
-    extras.appendChild(sel);
-
-    if (user.foolVariant == "1.1") {
-        let symb = document.createElement("span");
-        symb.innerHTML = `${user.foolDie.side} → ${user.foolDie.symbol}`;
-        let effect = foolEffects11[user.foolDie.symbol];
-        if (effect) {
-            symb.setAttribute("title", effect);
+function addFoolDieInfo(user, extras) {
+    let summary = document.createElement("span");
+    let die = user.foolDie, n_pos = 0, n_neg = 0, disp = new Array(6);
+    die.sides.forEach((v, i) => {
+        if (v == '+') {
+            n_pos++;
+            disp[i] = `${i+1}: ${die.posSymbol}`;
+        } else if (v == '-') {
+            n_neg++;
+            disp[i] = `${i+1}: ${die.negSymbol}`;
+        } else {
+            disp[i] = i + 1;
         }
-        extras.appendChild(symb);
-    } else {
-        let summary = document.createElement("span");
-        let die = user.foolDie, n_pos = 0, n_neg = 0, disp = new Array(6);
-        die.sides.forEach((v, i) => {
-            if (v == '+') {
-                n_pos++;
-                disp[i] = die.posSymbol;
-            } else if (v == '-') {
-                n_neg++;
-                disp[i] = die.negSymbol;
-            } else {
-                disp[i] = i;
-            }
-        });
-        summary.innerHTML = `(${n_pos} good, ${n_neg} bad)`;
-        summary.setAttribute("title", `${disp.join(' / ')}\n${die.posSymbol}: ${user.foolDie.effect}`);
-        extras.appendChild(summary);
-    }
+    });
+    summary.innerHTML = `(${n_pos} good, ${n_neg} bad)`;
+    summary.setAttribute("title", `${disp.join(' / ')}\n${die.posSymbol}: ${user.foolDie.effect}`);
+    extras.appendChild(summary);
 }
 
 
@@ -112,7 +88,7 @@ ws.handlers.set("users", msg => {
         let extras = tr.querySelector('.extra-actions');
         if (user.class === "fool") {
             addHasDie(user, extras);
-            addFoolVariantSelector(user, extras);
+            addFoolDieInfo(user, extras);
         } else if (user.class === "dictator") {
             addHasDie(user, extras);
         }

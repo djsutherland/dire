@@ -156,20 +156,22 @@ function handleFool(msg, classId, controls) {
 
       // Scribble away; send code 2 seconds after *last* change.
       let scribbleTimeout;
+
+      function updateFoolDie() {
+        ws.send(JSON.stringify({
+          action: "fool-set-die",
+          posSymbol: scribbler.querySelector('[name="posSymbol"]').value,
+          negSymbol: scribbler.querySelector('[name="negSymbol"]').value,
+          sides: range(1, 7).map(i => selectorValue(scribbler.querySelector(`select[name="${i}"]`))),
+          effect: scribbler.querySelector('[name="fluke"]').value,
+        }));
+        scribbleTimeout = undefined;
+      }
+
       scribbler.addEventListener('input', (event) => {
-        if (scribbleTimeout !== undefined) {
+        if (scribbleTimeout !== undefined)
           window.clearTimeout(scribbleTimeout);
-        }
-        scribbleTimeout = window.setTimeout(() => {
-          ws.send(JSON.stringify({
-            action: "fool-set-die",
-            posSymbol: scribbler.querySelector('[name="posSymbol"]').value,
-            negSymbol: scribbler.querySelector('[name="negSymbol"]').value,
-            sides: range(1, 7).map(i => selectorValue(scribbler.querySelector(`select[name="${i}"]`))),
-            effect: scribbler.querySelector('[name="fluke"]').value,
-          }));
-          scribbleTimeout = undefined;
-        }, 2000);
+        scribbleTimeout = window.setTimeout(updateFoolDie, 1500);
       });
     }
     controls.append(scribbler);
