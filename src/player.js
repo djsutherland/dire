@@ -144,7 +144,7 @@ function handleFool(msg, classId, controls) {
         scribbler.querySelector(`[name="${i}"] [value="${msg.foolDie.sides[i-1]}"]`).setAttribute("selected", true);
       }
       scribbler.querySelector("[name='fluke']").value = msg.foolDie.effect;  // avoid worrying about escaping
-      for (let inp of scribbler.querySelectorAll("input")) {
+      for (let inp of scribbler.querySelectorAll("input[name$='Symbol']")) {
         inp.addEventListener('input', event => {
           let optval = event.target.name == "posSymbol" ? "+" : "-";
           let symb = splitter.splitGraphemes(event.target.value.trim())[0] || optval;
@@ -153,14 +153,23 @@ function handleFool(msg, classId, controls) {
           }
         });
       }
-      scribbler.addEventListener('change', (event) => {
-        ws.send(JSON.stringify({
-          action: "fool-set-die",
-          posSymbol: scribbler.querySelector('[name="posSymbol"]').value,
-          negSymbol: scribbler.querySelector('[name="negSymbol"]').value,
-          sides: range(1, 7).map(i => selectorValue(scribbler.querySelector(`select[name="${i}"]`))),
-          effect: scribbler.querySelector('[name="fluke"]').value,
-        }));
+
+      // Scribble away; send code 2 seconds after *last* change.
+      let scribbleTimeout;
+      scribbler.addEventListener('input', (event) => {
+        if (scribbleTimeout !== undefined) {
+          window.clearTimeout(scribbleTimeout);
+        }
+        scribbleTimeout = window.setTimeout(() => {
+          ws.send(JSON.stringify({
+            action: "fool-set-die",
+            posSymbol: scribbler.querySelector('[name="posSymbol"]').value,
+            negSymbol: scribbler.querySelector('[name="negSymbol"]').value,
+            sides: range(1, 7).map(i => selectorValue(scribbler.querySelector(`select[name="${i}"]`))),
+            effect: scribbler.querySelector('[name="fluke"]').value,
+          }));
+          scribbleTimeout = undefined;
+        }, 2000);
       });
     }
     controls.append(scribbler);
