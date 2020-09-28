@@ -399,7 +399,7 @@ function buildSocketServer(webserver) {
           user.dieWithGM = false;
         }
         if (user.foolVariant === undefined) {
-          user.foolVariant = "1.1";
+          user.foolVariant = "1.2";
         }
         if (user.foolDie === undefined) {
           if (user.foolVariant == "1.1") {
@@ -421,6 +421,11 @@ function buildSocketServer(webserver) {
               effect: "Your opponent gets talking and confesses something useful to you.",
             };
           }
+        }
+        break;
+      case "dictator":
+        if (user.dieWithGM === undefined) {
+          user.dieWithGM = false;
         }
         break;
     }
