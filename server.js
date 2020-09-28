@@ -516,7 +516,8 @@ function buildSocketServer(webserver) {
           res.status = res.roll >= 4 ? "badness" : "nothing";
           break;
         case "fool":
-          [res.symbol, res.status] = getFoolDisplay(user, res.roll);
+          res.status = getRollStatus(res.roll);
+          res.symbol = getFoolSymbol(user, res.roll);
           break;
         case "dictator":
         case "knight":
@@ -611,18 +612,18 @@ function buildSocketServer(webserver) {
     }
   }
 
-  function getFoolDisplay(user, i) {
+  function getFoolSymbol(user, i) {
     fillDefaults(user);
     switch (user.foolDie ? user.foolDie.sides[i - 1] : ".") {
       case "+":
-        return [user.foolDie.posSymbol, getRollStatus(i)];
+        return user.foolDie.posSymbol;
       case "-":
-        return [user.foolDie.negSymbol, getRollStatus(i)];
+        return user.foolDie.negSymbol;
       default:
         console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
         /* falls through */
       case ".":
-        return [undefined, getRollStatus(i)];
+        return undefined;
     }
   }
 
@@ -634,7 +635,7 @@ function buildSocketServer(webserver) {
       effect: data.effect.trim(),
     };
 
-    let valDisplay = _.range(6).map(i => getFoolDisplay(user, i + 1)[0]);
+    let valDisplay = _.range(6).map(i => `${i+1} ${getFoolSymbol(user, i + 1) || ''}`.trim());
     let text = `${user.username} scribbled on their die: ` +
                `${valDisplay.join(" / ")}. Effect: ${user.foolDie.effect}`;
     sendAction(user, {action: 'user-status', text: text, private: true});
