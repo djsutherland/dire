@@ -17,7 +17,8 @@ const LevelStore = LevelStoreCls(session);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import {sidesByKind, classNames} from './src/game-data.mjs';
+import {sidesByKind, classNames, getEmoLevel} from './src/game-data.mjs';
+import {capFirst} from './src/helpers.mjs';
 
 const foolDefaultGood = '😲';
 const foolDefaultBad = '💩';
@@ -399,6 +400,11 @@ function buildSocketServer(webserver) {
       user.class = "none";
     }
     switch (user.class) {
+      case "dictator":
+        if (user.dieWithGM === undefined) {
+          user.dieWithGM = false;
+        }
+        break;
       case "fool":
         if (user.dieWithGM === undefined) {
           user.dieWithGM = false;
@@ -412,9 +418,9 @@ function buildSocketServer(webserver) {
           };
         }
         break;
-      case "dictator":
-        if (user.dieWithGM === undefined) {
-          user.dieWithGM = false;
+      case "knight":
+        if (user.emoLevel === undefined) {
+          user.emoLevel = 0;
         }
         break;
     }
@@ -430,12 +436,16 @@ function buildSocketServer(webserver) {
       class: user.class,
     };
     switch (user.class) {
+      case "dictator":
+        res.dieWithGM = user.dieWithGM;
+        break;
       case "fool":
         res.dieWithGM = user.dieWithGM;
         res.foolDie = user.foolDie;
         break;
-      case "dictator":
-        res.dieWithGM = user.dieWithGM;
+      case "knight":
+        res.emoKind = user.emoKind;
+        res.emoLevel = user.emoLevel;
         break;
     }
     return res;
@@ -467,6 +477,24 @@ function buildSocketServer(webserver) {
   const checkUserClass = (cls, fn) => checkUserAttr("class", c => c == cls, fn);
   const checkUserClassIn = (classes, fn) => checkUserAttr("class", c => classes.includes(c), fn);
   const checkUserIsGM = fn => checkUserAttr("role", r => r == "GM", fn);
+
+  function checkTargetClass(cls, fn) {
+    return (data, source) => {
+      let doer = userData.get(source.username);
+
+      if (doer.role === "GM") {
+        let target = userData.get(data.username);
+        fn(target, doer, data, source);
+      } else if (doer.class === cls) {
+        fn(doer, doer, data, source);
+      } else {
+        console.error(
+          `Bad attempt by ${doer.username} (${doer.class}, expected ${cls}):`,
+          data);
+        return;
+      }
+    };
+  }
 
 
   // the core of the server
@@ -647,6 +675,22 @@ function buildSocketServer(webserver) {
     refreshUserData(user);
   }));
 
+  handlers.set("set-knight-kind", checkTargetClass('knight', (user, doer, data, source) => {
+    user.emoKind = data.emoKind;
+    sendAction(doer, {action: 'user-status',
+                      text: `${user.username} is now a ${capFirst(data.emoKind)} Knight.`});
+    refreshUserData(user);
+  }));
+
+  handlers.set("set-knight-level", checkTargetClass('knight', (user, doer, data, source) => {
+    user.emoLevel = data.emoLevel;
+
+    let s = capFirst(getEmoLevel(user.emoKind, user.emoLevel));
+    sendAction(doer, {
+      action: 'user-status',
+      text: `${user.username}'s ${capFirst(user.emoKind)} is now level ${user.emoLevel}: ${s}`});
+    refreshUserData(user);
+  }));
 
   handlers.set("kick", checkUserIsGM((doer, data, source) => {
     sendUserOne(userData.get(data.username), {action: "kick", reason: "Kicked by GM."});

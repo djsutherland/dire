@@ -21,6 +21,46 @@ export const classNames = {
   master: "the Master"
 };
 
+export const emoWheel = {
+  "vigilance": ["interest", "anticipation", "vigilance"],
+  "ecstasy": ["serenity", "joy", "ecstasy"],
+  "admiration": ["acceptance", "trust", "admiration"],
+  "terror": ["apprehension", "fear", "terror"],
+  "amazement": ["distraction", "surprise", "amazement"],
+  "grief": ["pensiveness", "sadness", "grief"],
+  "loathing": ["boredom", "disgust", "loathing"],
+  "rage": ["annoyance", "anger", "rage"],
+};
+
+export let emoLookup = {};
+for (const spoke in emoWheel) {
+  for (let i = 0; i < 3; i++) {
+    // using for ... of seems to break things here for some reason
+    emoLookup[emoWheel[spoke][i]] = spoke;
+  }
+}
+
+export const emoLevels = {
+  0: ["Nothing", ""],
+  1: ["Level 1", "Greater and lesser abilities available; advantage on attacks with your weapon."],
+  2: ["Level 2", "You could defeat: a mob, a blockage, a village, a weakness."],
+  3: ["Level 3", "You could defeat: an army, a mountain range, a town."],
+  4: ["Lost", "You can defeat: a city, despair, someone you truly love."],
+  5: ["Consumed", "You can defeat: a country, a religion."],
+  6: ["Inhuman", "You can defeat: a god, hope, yourself."],
+  7: ["Inhuman", "You can defeat: a god, hope, yourself."],
+  8: ["Inhuman", "You can defeat: a god, hope, yourself."],
+  9: ["Inhuman", "You can defeat: a god, hope, yourself."],
+};
+
+export function getEmoLevel(emoKind, emoLevel) {
+  if (emoLevel >= 1 && emoLevel <= 3 && emoKind in emoLookup) {
+    return emoWheel[emoLookup[emoKind]][emoLevel - 1];
+  } else {
+    return emoLevels[emoLevel][0];
+  }
+}
+
 export const dicePaths = {
   dictator: {
     fill: "M232.7,87.3L69.3,370.2c-7.7,13.3,1.9,30,17.3,30h326.7c15.4,0,25-16.7,17.3-30L267.3,87.3 C259.6,73.9,240.4,73.9,232.7,87.3z",

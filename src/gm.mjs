@@ -1,8 +1,8 @@
 import hotkeys from 'hotkeys-js';
 
-import {ready, selectorValue} from './helpers';
+import {getEmoLevel, ready, selectorValue,
+        fillKnightKindSelector, fillKnightLevelSelector} from './helpers';
 import {ws, can_notify, username, getUsersUpdate} from './rolls';
-import {foolEffects11} from './game-data';
 
 function sendAction(event, params) {
     ws.send(JSON.stringify(Object.assign(
@@ -51,6 +51,28 @@ function addFoolDieInfo(user, extras) {
     extras.appendChild(summary);
 }
 
+function addKnightInfo(user, extras) {
+    let kind = document.createElement('label');
+    kind.innerHTML = 'Kind: <select></select>';
+    let kindSel = kind.querySelector('select');
+    fillKnightKindSelector(kindSel, user.emoKind);
+    kind.addEventListener('change', (event) => {
+        ws.send(JSON.stringify({action: "set-knight-kind", username: user.username,
+                                emoKind: selectorValue(kindSel)}));
+    });
+    extras.appendChild(kind);
+
+    let level = document.createElement('level');
+    level.innerHTML = 'Level: <select></select>';
+    let levelSel = level.querySelector('select');
+    fillKnightLevelSelector(levelSel, user.emoKind, user.emoLevel);
+    level.addEventListener('change', (event) => {
+        ws.send(JSON.stringify({action: "set-knight-level", username: user.username,
+                                emoLevel: selectorValue(levelSel)}));
+    });
+    extras.appendChild(level);
+}
+
 
 ws.handlers.set("users", msg => {
     getUsersUpdate(msg);
@@ -86,11 +108,17 @@ ws.handlers.set("users", msg => {
         }
 
         let extras = tr.querySelector('.extra-actions');
-        if (user.class === "fool") {
-            addHasDie(user, extras);
-            addFoolDieInfo(user, extras);
-        } else if (user.class === "dictator") {
-            addHasDie(user, extras);
+        switch (user.class) {
+            case "dictator":
+                addHasDie(user, extras);
+                break;
+            case "fool":
+                addHasDie(user, extras);
+                addFoolDieInfo(user, extras);
+                break;
+            case "knight":
+                addKnightInfo(user, extras);
+                break;
         }
 
         tbody.appendChild(tr);

@@ -2,8 +2,9 @@ import './dom-polyfills';
 import range from 'lodash/range';
 import GraphemeSplitter from 'grapheme-splitter';
 
-import {foolEffects11} from './game-data';
-import {ready, selectorValue} from './helpers';
+import {emoLevels} from './game-data';
+import {capFirst, ready, selectorValue,
+        fillKnightKindSelector, fillKnightLevelSelector} from './helpers';
 import {ws, sidesByKind, classNames, selectedToggler} from './rolls';
 
 const splitter = new GraphemeSplitter();
@@ -31,7 +32,14 @@ ws.handlers.set("getUserData", msg => {
       document.getElementById('dice').prepend(die);
     }
     die.setAttribute("src", `/img/${msg.class}.png`);
-    classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${classNames[msg.class]}</a>.`;
+
+    let className;
+    if (msg.class == "knight" && msg.emoKind !== undefined) {
+      className = `the ${capFirst(msg.emoKind)} Knight`;
+    } else {
+      className = classNames[msg.class];
+    }
+    classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${className}</a>.`;
   } else {
     document.querySelectorAll("#my-die").forEach(d => d.remove());
     if (classNames[msg.class]) {
@@ -48,6 +56,10 @@ ws.handlers.set("getUserData", msg => {
 
     case "fool":
       handleFool(msg, classId, controls);
+      break;
+
+    case "knight":
+      handleKnight(msg, classId, controls);
       break;
 
     default:
@@ -72,6 +84,28 @@ function handleDieTaking(msg, classId, controls) {
       ws.send(JSON.stringify({action: "player-hand-die"}));
     });
   }
+}
+
+function handleKnight(msg, classId, controls) {
+  controls.innerHTML = `
+    <label>Sacred Emotion: <select id="emoKind" name="emoKind"></select></label>
+    <label>Level: <select id="emoLevel" name="emoLevel"></select></label>
+    <br><span id="emoCapabilities"></span>
+  `;
+  let kind = controls.querySelector('#emoKind');
+  fillKnightKindSelector(kind, msg.emoKind);
+  kind.addEventListener('change', (event) => {
+    ws.send(JSON.stringify({action: "set-knight-kind", emoKind: selectorValue(kind)}));
+  });
+
+  let level = controls.querySelector('#emoLevel');
+  fillKnightLevelSelector(level, msg.emoKind, msg.emoLevel);
+  level.addEventListener('change', (event) => {
+    ws.send(JSON.stringify({action: "set-knight-level",
+                            emoLevel: parseInt(selectorValue(level), 10)}));
+  });
+
+  controls.querySelector('#emoCapabilities').innerHTML = emoLevels[msg.emoLevel][1];
 }
 
 function handleFool(msg, classId, controls) {
@@ -118,7 +152,8 @@ function handleFool(msg, classId, controls) {
         symbsel.querySelector('option[value="?"]').setAttribute("selected", true);
       }
 
-      scribbler.querySelector(`select[name="side"] [value="${msg.foolDie.side}"]`).setAttribute("selected", true);
+      scribbler.querySelector(`select[name="side"] [value="${msg.foolDie.side}"]`)
+               .setAttribute("selected", true);
       scribbler.addEventListener('change', (event) => {
         event.preventDefault();
         ws.send(JSON.stringify({
