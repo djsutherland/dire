@@ -12,13 +12,13 @@ export const sidesByKind = {
 };
 
 export const classNames = {
-  dictator: "the Dictator",
-  fool: "the Fool",
+  dictator: "a Dictator",
+  fool: "a Fool",
   fallen: "a Fallen",
-  knight: "the Emotion Knight",
-  neo: "the Neo",
-  godbinder: "the Godbinder",
-  master: "the Master"
+  knight: "an Emotion Knight",
+  neo: "a Neo",
+  godbinder: "a Godbinder",
+  master: "a Master"
 };
 
 export const emoWheel = {

@@ -3,7 +3,7 @@ import range from 'lodash/range';
 import GraphemeSplitter from 'grapheme-splitter';
 
 import {emoLevels} from './game-data';
-import {capFirst, ready, selectorValue,
+import {capFirst, ready, selectorValue, getIndefiniteArticle,
         fillKnightKindSelector, fillKnightLevelSelector} from './helpers';
 import {ws, sidesByKind, classNames, selectedToggler} from './rolls';
 
@@ -35,7 +35,7 @@ ws.handlers.set("getUserData", msg => {
 
     let className;
     if (msg.class == "knight" && msg.emoKind !== undefined) {
-      className = `the ${capFirst(msg.emoKind)} Knight`;
+      className = `${getIndefiniteArticle(msg.emoKind)} ${capFirst(msg.emoKind)} Knight`;
     } else {
       className = classNames[msg.class];
     }

@@ -70,3 +70,16 @@ export function fillKnightLevelSelector(select, emoKind, selectedLevel) {
     select.append(o);
   }
 }
+
+export function getIndefiniteArticle(next) {
+  switch (next[0].toLowerCase()) {
+    case "a":
+    case "e":
+    case "i":
+    case "o":
+    case "u":
+      return "an";
+    default:
+      return "a";
+  }
+}

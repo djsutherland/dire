@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
 
 import {sidesByKind, classNames, getEmoLevel} from './src/game-data.mjs';
 import {splitGraphemes} from './src/grapheme-splitter.mjs'
-import {capFirst} from './src/helpers.mjs';
+import {capFirst, getIndefiniteArticle} from './src/helpers.mjs';
 
 const foolDefaultGood = '😲';
 const foolDefaultBad = '💩';
@@ -678,7 +678,8 @@ function buildSocketServer(webserver) {
   handlers.set("set-knight-kind", checkTargetClass('knight', (user, doer, data, source) => {
     user.emoKind = data.emoKind;
     sendAction(doer, {action: 'user-status',
-                      text: `${user.username} is now a ${capFirst(data.emoKind)} Knight.`});
+                      text: `${user.username} is now ${getIndefiniteArticle(data.emoKind)} ` +
+                            `${capFirst(data.emoKind)} Knight.`});
     refreshUserData(user);
   }));
 
