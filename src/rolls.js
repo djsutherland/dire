@@ -112,7 +112,7 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
   const svg = document.getElementById('svgfield'),
         ns = svg.getAttribute("xmlns");
 
-  if (kind != "d6" && kind != "bad") {
+  if (kind != "d6" && kind != "bad" && kind != "fool") {
     if (!fillColor) fillColor = classDieFill;
     if (!strokeColor) strokeColor = classDieStroke;
     if (!textColor) textColor = classDieTextColor;
@@ -165,9 +165,19 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
     return die;
 
   } else {
-    if (!fillColor) fillColor = kind == "bad" ? "red" : "white";
-    if (!strokeColor) strokeColor = kind == "black";
-    if (!textColor) textColor = kind == "bad" ? "white" : "black";
+    if (kind == "d6") {
+      if (!fillColor) fillColor = "white";
+      if (!strokeColor) strokeColor = "black";
+      if (!textColor) textColor = "black";
+    } else if (kind == "bad") {
+      if (!fillColor) fillColor = "red";
+      if (!strokeColor) strokeColor = "black";
+      if (!textColor) textColor = "white";
+    } else {
+      if (!fillColor) fillColor = classDieFill;
+      if (!strokeColor) strokeColor = classDieStroke;
+      if (!textColor) textColor = classDieTextColor;
+    }
 
     let key = `${kind}-${value}`;
     let base = svgDice[key];
@@ -183,7 +193,7 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
       base.appendChild(title);
 
       // want center at 0, 0
-      // slightly smaller than the fool d6
+      // slightly smaller than the non-fool class dice
       let width = 65, height = width, x = -width/2, y = x;
 
       const rect = document.createElementNS(ns, 'rect');
@@ -225,6 +235,22 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
         dot.setAttribute("r", 0.035 * (height + width));
         dot.setAttribute("fill", textColor);
         base.appendChild(dot);
+      }
+
+      if (kind == "fool" && display != value) {
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute("x", x + 0.5 * width);
+        text.setAttribute("y", y + 0.75 * width);
+        text.setAttribute("alignment-baseline", "bottom");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", textColor);
+        text.style.fontFamily = "'Ubuntu Condensed-Regular', 'Ubuntu Condensed', sans-serif";
+        text.style.fontSize = "50px";
+        // text.style.letterSpacing = "-5px";
+        text.classList.add("text"); // to not querySelect by namespace, sigh
+
+        text.innerHTML = display;
+        base.appendChild(text);
       }
     }
 
