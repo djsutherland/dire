@@ -2,8 +2,8 @@ const path = require('path');
 
 module.exports = {
     entry: {
-        player: './src/player.js',
-        gm: './src/gm.js'
+        player: './src/player.mjs',
+        gm: './src/gm.mjs'
     },
     output: {
         path: path.resolve(__dirname, 'public/js'),
