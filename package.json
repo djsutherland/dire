@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "description": "",
-  "main": "server.js",
+  "main": "server.mjs",
   "scripts": {
     "dev": "webpack --mode development",
     "build": "webpack --mode production"

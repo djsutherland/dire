@@ -1,18 +1,23 @@
-const _ = require('lodash');
-const express = require('express');
-const fs = require('fs');
-const splitGraphemes = (new require('grapheme-splitter')()).splitGraphemes;
-const http = require('http');
-const https = require('https');
-const level = require('level');
-const minimist = require('minimist');
-const session = require('express-session');
-const LevelStore = require('level-session-store')(session);
-const WebSocket = require('ws');
+import cryptoRandomString from 'crypto-random-string';
+import graphemeSplitter from 'grapheme-splitter';
+import express from 'express';
+import session from 'express-session';
+import fs from 'fs';
+import http from 'http';
+import https from 'https';
+import level from 'level';
+import LevelStoreCls from 'level-session-store';
+import _ from 'lodash';
+import minimist from 'minimist';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import WebSocket from 'ws';
 
-const gameData = require('./src/game-data');
-sidesByKind = gameData.sidesByKind;
-classNames = gameData.classNames;
+const LevelStore = LevelStoreCls(session);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+import {sidesByKind, classNames} from './src/game-data.mjs';
 
 const foolDefaultGood = '😲';
 const foolDefaultBad = '💩';
@@ -96,7 +101,7 @@ function getSessionSecret(db) {
   return db.get("session_secret")
     .catch(err => {
       if (err && err.notFound) {
-        let secret = require('crypto-random-string')({length: 12, type: 'base64'});
+        let secret = cryptoRandomString({length: 12, type: 'base64'});
         db.put("session_secret", secret);
         return secret;
       } else {
@@ -459,9 +464,9 @@ function buildSocketServer(webserver) {
       fn(user, data, source);
     };
   }
-  checkUserClass = (cls, fn) => checkUserAttr("class", c => c == cls, fn);
-  checkUserClassIn = (classes, fn) => checkUserAttr("class", c => classes.includes(c), fn);
-  checkUserIsGM = fn => checkUserAttr("role", r => r == "GM", fn);
+  const checkUserClass = (cls, fn) => checkUserAttr("class", c => c == cls, fn);
+  const checkUserClassIn = (classes, fn) => checkUserAttr("class", c => classes.includes(c), fn);
+  const checkUserIsGM = fn => checkUserAttr("role", r => r == "GM", fn);
 
 
   // the core of the server

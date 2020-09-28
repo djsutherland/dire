@@ -1,4 +1,4 @@
-const sidesByKind = {
+export const sidesByKind = {
   none: 0,
   dictator: 4,
   d6: 6,
@@ -11,7 +11,7 @@ const sidesByKind = {
   master: 20
 };
 
-const classNames = {
+export const classNames = {
   dictator: "the Dictator",
   fool: "the Fool",
   fallen: "a Fallen",
@@ -21,13 +21,7 @@ const classNames = {
   master: "the Master"
 };
 
-const foolEffects11 = {
-  X: "Disarm a foe",
-  O: "Knock a foe over; they lose all guard",
-  V: "Inspire all allies to get advantage next round",
-};
-
-const dicePaths = {
+export const dicePaths = {
   dictator: {
     fill: "M232.7,87.3L69.3,370.2c-7.7,13.3,1.9,30,17.3,30h326.7c15.4,0,25-16.7,17.3-30L267.3,87.3 C259.6,73.9,240.4,73.9,232.7,87.3z",
     stroke: "M413.4,406.2H86.6c-9.4,0-17.8-4.9-22.5-13c-4.7-8.1-4.7-17.9,0-26L227.5,84.3c4.7-8.1,13.1-13,22.5-13 c9.4,0,17.8,4.9,22.5,13l163.4,282.9c4.7,8.1,4.7,17.9,0,26C431.2,401.3,422.8,406.2,413.4,406.2z M250,83.3c-5.1,0-9.6,2.6-12.1,7 L74.5,373.2c-2.5,4.4-2.5,9.6,0,14c2.5,4.4,7.1,7,12.1,7h326.7c5.1,0,9.6-2.6,12.1-7c2.5-4.4,2.5-9.6,0-14L262.1,90.3 C259.6,85.9,255.1,83.3,250,83.3z",
@@ -59,9 +53,3 @@ const dicePaths = {
     textX: 250, textY: 260,
   }
 };
-
-exports.sidesByKind = sidesByKind;
-exports.classNames = classNames;
-exports.foolEffects11 = foolEffects11;
-exports.dicePaths = dicePaths;
-
