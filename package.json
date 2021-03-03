@@ -21,7 +21,7 @@
     "level-session-store": "^2.2.0",
     "lodash": "^4.17.20",
     "minimist": "^1.2.5",
-    "pug": "^3.0.0",
+    "pug": "^3.0.1",
     "ws": "^7.3.1"
   },
   "devDependencies": {
