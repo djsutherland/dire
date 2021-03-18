@@ -1,18 +1,24 @@
-const _ = require('lodash');
-const express = require('express');
-const fs = require('fs');
-const splitGraphemes = (new require('grapheme-splitter')()).splitGraphemes;
-const http = require('http');
-const https = require('https');
-const level = require('level');
-const minimist = require('minimist');
-const session = require('express-session');
-const LevelStore = require('level-session-store')(session);
-const WebSocket = require('ws');
+import cryptoRandomString from 'crypto-random-string';
+import express from 'express';
+import session from 'express-session';
+import fs from 'fs';
+import http from 'http';
+import https from 'https';
+import level from 'level';
+import LevelStoreCls from 'level-session-store';
+import _ from 'lodash';
+import minimist from 'minimist';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import WebSocket from 'ws';
 
-const gameData = require('./src/game-data');
-sidesByKind = gameData.sidesByKind;
-classNames = gameData.classNames;
+const LevelStore = LevelStoreCls(session);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+import {sidesByKind, classNames, getEmoLevel} from './src/game-data.mjs';
+import {splitGraphemes} from './src/grapheme-splitter.mjs'
+import {capFirst, getIndefiniteArticle} from './src/helpers.mjs';
 
 const foolDefaultGood = '😲';
 const foolDefaultBad = '💩';
@@ -96,7 +102,7 @@ function getSessionSecret(db) {
   return db.get("session_secret")
     .catch(err => {
       if (err && err.notFound) {
-        let secret = require('crypto-random-string')({length: 12, type: 'base64'});
+        let secret = cryptoRandomString({length: 12, type: 'base64'});
         db.put("session_secret", secret);
         return secret;
       } else {
@@ -354,15 +360,17 @@ function buildSocketServer(webserver) {
       username: user.username,
       role: user.role,
       time: Date.now(),
+      live: true,
     }, result);
-
-    actionsLog.push(a);
-    db.put(`actions/${actionsLog.length - 1}`, JSON.stringify(a));
-    db.put('n-actions', actionsLog.length);
 
     socketserver.tellAllOne(
       a,
       a.private ? u => (u.role == "GM" || u.username == a.username) : undefined);
+
+    a.live = false;
+    actionsLog.push(a);
+    db.put(`actions/${actionsLog.length - 1}`, JSON.stringify(a));
+    db.put('n-actions', actionsLog.length);
   }
 
   function sendUserOne(user, msg) {
@@ -392,33 +400,30 @@ function buildSocketServer(webserver) {
       user.class = "none";
     }
     switch (user.class) {
+      case "dictator":
+        if (user.dieWithGM === undefined) {
+          user.dieWithGM = false;
+        }
+        break;
       case "fool":
         if (user.dieWithGM === undefined) {
           user.dieWithGM = false;
         }
-        if (user.foolVariant === undefined) {
-          user.foolVariant = "1.1";
-        }
         if (user.foolDie === undefined) {
-          if (user.foolVariant == "1.1") {
-            user.foolDie = {
-              symbol: "?",
-              side: 0,
-            };
-          } else {
-            if (user.foolVariant != "1.2") {
-              if (user.foolVariant) {
-                console.error(`Unknown fool variant ${user.foolVariant}; assuming 1.2`);
-              }
-              user.foolVariant = "1.2";
-            }
-            user.foolDie = {
-              posSymbol: foolDefaultGood,
-              negSymbol: foolDefaultBad,
-              sides: [".", ".", ".", ".", ".", "."],
-              effect: "Your opponent gets talking and confesses something useful to you.",
-            };
-          }
+          user.foolDie = {
+            posSymbol: foolDefaultGood,
+            negSymbol: foolDefaultBad,
+            sides: [".", ".", ".", ".", ".", "."],
+            effect: "Your opponent gets talking and confesses something useful to you.",
+          };
+        }
+        break;
+      case "knight":
+        if (user.emoLevel === undefined) {
+          user.emoLevel = 0;
+        }
+        if (user.maxViolence === undefined) {
+          user.maxViolence = 2;
         }
         break;
     }
@@ -434,13 +439,17 @@ function buildSocketServer(webserver) {
       class: user.class,
     };
     switch (user.class) {
-      case "fool":
-        res.dieWithGM = user.dieWithGM;
-        res.foolVariant = user.foolVariant;
-        res.foolDie = user.foolDie;
-        break;
       case "dictator":
         res.dieWithGM = user.dieWithGM;
+        break;
+      case "fool":
+        res.dieWithGM = user.dieWithGM;
+        res.foolDie = user.foolDie;
+        break;
+      case "knight":
+        res.emoKind = user.emoKind;
+        res.emoLevel = user.emoLevel;
+        res.maxViolence = user.maxViolence;
         break;
     }
     return res;
@@ -469,9 +478,27 @@ function buildSocketServer(webserver) {
       fn(user, data, source);
     };
   }
-  checkUserClass = (cls, fn) => checkUserAttr("class", c => c == cls, fn);
-  checkUserClassIn = (classes, fn) => checkUserAttr("class", c => classes.includes(c), fn);
-  checkUserIsGM = fn => checkUserAttr("role", r => r == "GM", fn);
+  const checkUserClass = (cls, fn) => checkUserAttr("class", c => c == cls, fn);
+  const checkUserClassIn = (classes, fn) => checkUserAttr("class", c => classes.includes(c), fn);
+  const checkUserIsGM = fn => checkUserAttr("role", r => r == "GM", fn);
+
+  function checkTargetClass(cls, fn) {
+    return (data, source) => {
+      let doer = userData.get(source.username);
+
+      if (doer.role === "GM") {
+        let target = userData.get(data.username);
+        fn(target, doer, data, source);
+      } else if (doer.class === cls) {
+        fn(doer, doer, data, source);
+      } else {
+        console.error(
+          `Bad attempt by ${doer.username} (${doer.class}, expected ${cls}):`,
+          data);
+        return;
+      }
+    };
+  }
 
 
   // the core of the server
@@ -526,7 +553,8 @@ function buildSocketServer(webserver) {
           res.status = res.roll >= 4 ? "badness" : "nothing";
           break;
         case "fool":
-          [res.display, res.status] = getFoolDisplay(user, res.roll);
+          res.status = getRollStatus(res.roll);
+          res.symbol = getFoolSymbol(user, res.roll);
           break;
         case "dictator":
         case "knight":
@@ -576,15 +604,6 @@ function buildSocketServer(webserver) {
     refreshUserData(target);
   }));
 
-  handlers.set("fool-set-variant", checkUserIsGM((doer, data, source) => {
-    let target = userData.get(data.username);
-    if (target.foolVariant != data.foolVariant) {
-      target.foolVariant = data.foolVariant;
-      delete target.foolDie;  // different format...
-      refreshUserData(target);
-    }
-  }));
-
   let dieHanders = ['fool', 'dictator'];
   handlers.set("player-hand-die", checkUserClassIn(dieHanders, (user, data, source) => {
     if (!user.dieWithGM) {
@@ -630,52 +649,62 @@ function buildSocketServer(webserver) {
     }
   }
 
-  function getFoolDisplay(user, i) {
+  function getFoolSymbol(user, i) {
     fillDefaults(user);
-    if (user.foolVariant == "1.1") {
-      if (i == user.foolDie.side) {
-        return [user.foolDie.symbol, "special"];
-      } else {
-        return [i, getRollStatus(i)];
-      }
-    } else {
-      switch (user.foolDie ? user.foolDie.sides[i - 1] : ".") {
-        case "+":
-          return [`${i}→${user.foolDie.posSymbol}`, `${getRollStatus(i)}`];
-        case "-":
-          return [`${i}→${user.foolDie.negSymbol}`, `${getRollStatus(i)}`];
-        default:
-          console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
-          /* falls through */
-        case ".":
-          return [i, getRollStatus(i)];
-      }
+    switch (user.foolDie ? user.foolDie.sides[i - 1] : ".") {
+      case "+":
+        return user.foolDie.posSymbol;
+      case "-":
+        return user.foolDie.negSymbol;
+      default:
+        console.error(`Invalid fool sides value ${user.foolDie.sides[i-1]}`);
+        /* falls through */
+      case ".":
+        return undefined;
     }
   }
 
   handlers.set("fool-set-die", checkUserClass('fool', (user, data, source) => {
-    let extraText = '';
-    if (user.foolVariant == "1.1") {
-      user.foolDie = {
-        symbol: checkFoolSymbol(data.symbol),
-        side: data.side,
-      };
-    } else {
-      user.foolDie = {
-        posSymbol: checkFoolSymbol(data.posSymbol),
-        negSymbol: checkFoolSymbol(data.negSymbol, foolDefaultBad),
-        sides: data.sides,
-        effect: data.effect.trim(),
-      };
-      extraText = ` Effect: ${user.foolDie.effect}`;
-    }
+    user.foolDie = {
+      posSymbol: checkFoolSymbol(data.posSymbol),
+      negSymbol: checkFoolSymbol(data.negSymbol, foolDefaultBad),
+      sides: data.sides,
+      effect: data.effect.trim(),
+    };
 
-    let valDisplay = _.range(6).map(i => getFoolDisplay(user, i + 1)[0]);
-    let text = `${user.username} scribbled on their die: ${valDisplay.join(" / ")}.` + extraText;
+    let valDisplay = _.range(6).map(i => `${i+1} ${getFoolSymbol(user, i + 1) || ''}`.trim());
+    let text = `${user.username} scribbled on their die: ` +
+               `${valDisplay.join(" / ")}. Effect: ${user.foolDie.effect}`;
     sendAction(user, {action: 'user-status', text: text, private: true});
     refreshUserData(user);
   }));
 
+  handlers.set("set-knight-kind", checkTargetClass('knight', (user, doer, data, source) => {
+    user.emoKind = data.emoKind;
+    sendAction(doer, {action: 'user-status',
+                      text: `${user.username} is now ${getIndefiniteArticle(data.emoKind)} ` +
+                            `${capFirst(data.emoKind)} Knight.`});
+    refreshUserData(user);
+  }));
+
+  handlers.set("set-knight-level", checkTargetClass('knight', (user, doer, data, source) => {
+    user.emoLevel = data.emoLevel;
+
+    let s = capFirst(getEmoLevel(user.emoKind, user.emoLevel));
+    sendAction(doer, {
+      action: 'user-status',
+      text: `${user.username}'s ${capFirst(user.emoKind)} is now level ${user.emoLevel}: ${s}`});
+    refreshUserData(user);
+  }));
+
+  handlers.set("set-knight-max-violence", checkTargetClass('knight', (user, doer, data, source) => {
+    user.maxViolence = data.maxViolence;
+    sendAction(doer, {
+      action: 'user-status',
+      private: true,
+      text: `${user.username} can now do Creative Violence up to level ${user.maxViolence}.`});
+    refreshUserData(user);
+  }));
 
   handlers.set("kick", checkUserIsGM((doer, data, source) => {
     sendUserOne(userData.get(data.username), {action: "kick", reason: "Kicked by GM."});

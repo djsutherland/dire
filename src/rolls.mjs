@@ -2,7 +2,7 @@ import escape from 'lodash/escape';
 import hotkeys from 'hotkeys-js';
 const floor = Math.floor, ceil = Math.ceil;
 
-import {ready, selectorValue} from './helpers';
+import {ready, selectorValue, pageHidden} from './helpers';
 import {sidesByKind, classNames, dicePaths} from './game-data';
 export {sidesByKind, classNames} from './game-data';
 
@@ -108,17 +108,17 @@ const classDieFill = "purple",
       classDieTextColor = "rgb(230,170,100)";
 
 let svgDice = {};
-function getDie(kind, value, display, fillColor, strokeColor, textColor) {
+function getDie(kind, value, symbol, fillColor, strokeColor, textColor) {
   const svg = document.getElementById('svgfield'),
         ns = svg.getAttribute("xmlns");
 
-  if (kind != "d6" && kind != "bad") {
-    if (!fillColor) fillColor = classDieFill;
-    if (!strokeColor) strokeColor = classDieStroke;
-    if (!textColor) textColor = classDieTextColor;
-
+  if (kind != "d6" && kind != "bad" && kind != "fool") {
     let base = svgDice[kind];
     if (!base) {
+      if (!fillColor) fillColor = classDieFill;
+      if (!strokeColor) strokeColor = classDieStroke;
+      if (!textColor) textColor = classDieTextColor;
+
       base = svgDice[kind] = document.createElementNS(ns, 'g');
       const data = dicePaths[kind];
 
@@ -160,18 +160,27 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
     }
 
     let die = base.cloneNode(true);
-    die.querySelector('.text').innerHTML = display;
+    die.querySelector('.text').innerHTML = value;
     die.querySelector('.title').innerHTML = value;
     return die;
 
   } else {
-    if (!fillColor) fillColor = kind == "bad" ? "red" : "white";
-    if (!strokeColor) strokeColor = kind == "black";
-    if (!textColor) textColor = kind == "bad" ? "white" : "black";
-
-    let key = `${kind}-${value}`;
+    let key = `${kind}-${value}-${symbol}`;
     let base = svgDice[key];
     if (!base) {
+      if (kind == "d6") {
+        if (!fillColor) fillColor = "white";
+        if (!strokeColor) strokeColor = "black";
+        if (!textColor) textColor = "black";
+      } else if (kind == "bad") {
+        if (!fillColor) fillColor = "red";
+        if (!strokeColor) strokeColor = "black";
+        if (!textColor) textColor = "white";
+      } else {
+        if (!fillColor) fillColor = classDieFill;
+        if (!strokeColor) strokeColor = classDieStroke;
+        if (!textColor) textColor = classDieTextColor;
+      }
       base = svgDice[key] = document.createElementNS(ns, 'g');
 
       base.classList.add("die");
@@ -183,7 +192,7 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
       base.appendChild(title);
 
       // want center at 0, 0
-      // slightly smaller than the fool d6
+      // slightly smaller than the non-fool class dice
       let width = 65, height = width, x = -width/2, y = x;
 
       const rect = document.createElementNS(ns, 'rect');
@@ -226,6 +235,23 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
         dot.setAttribute("fill", textColor);
         base.appendChild(dot);
       }
+
+      if (kind == "fool" && symbol !== undefined) {
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute("x", x + 0.5 * width);
+        text.setAttribute("y", y + 0.75 * width);
+        text.setAttribute("alignment-baseline", "bottom");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", textColor);
+        text.setAttribute("opacity", 0.7);
+        text.style.fontFamily = "'Ubuntu Condensed-Regular', 'Ubuntu Condensed', sans-serif";
+        text.style.fontSize = "50px";
+        // text.style.letterSpacing = "-5px";
+        text.classList.add("text"); // to not querySelect by namespace, sigh
+
+        text.innerHTML = symbol;
+        base.appendChild(text);
+      }
     }
 
     return base.cloneNode(true);
@@ -234,7 +260,7 @@ function getDie(kind, value, display, fillColor, strokeColor, textColor) {
 
 
 function drawDie(roll, cx, cy, size, fillColor, strokeColor, textColor) {
-  let die = getDie(roll.kind, roll.roll, roll.display || roll.roll,
+  let die = getDie(roll.kind, roll.roll, roll.symbol,
                    fillColor, strokeColor, textColor);
   die.setAttribute("transform",
     `translate(${cx}, ${cy}) scale(${size / die.dataset.size})`);
@@ -298,6 +324,14 @@ export function setupResultLine(response) {
   return node.querySelector('.body');
 }
 
+function getRollAndSymbol(roll) {
+  if (roll.symbol !== undefined) {
+    return `${roll.roll} ${roll.symbol}`;
+  } else {
+    return roll.roll;
+  }
+}
+
 export function showRolls(response) {
   lastRoll = response;
   drawLastRoll();
@@ -310,8 +344,15 @@ export function showRolls(response) {
     child.dataset.status = roll.status;
     child.setAttribute("title", roll.roll);
     child.innerHTML = `<span class="label">d${roll.sides}:</span>
-                       <span class="value">${roll.display || roll.roll}</span>`;
+                       <span class="value">${getRollAndSymbol(roll)}</span>`;
     bodynode.appendChild(child);
+  }
+
+  if (response.live && can_notify && pageHidden()) {
+    new Notification(`${response.username} rolled`, {
+      body: response.rolls.map(getRollAndSymbol).join(', '),
+      silent: true,
+    });
   }
 }
 
@@ -332,11 +373,23 @@ export function showSafety(response) {
 export function showChat(response) {
   let bodynode = setupResultLine(response);
   bodynode.innerHTML = escape(response.text);
+
+  if (response.live && can_notify && pageHidden()) {
+    new Notification(`Chat from ${response.username}`, {
+      body: bodynode.innerHTML,
+    });
+  }
 }
 
 export function showUserStatus(response) {
   let bodynode = setupResultLine(response);
   bodynode.innerHTML = escape(response.text);
+
+  if (response.live && can_notify && pageHidden()) {
+    new Notification(`Update from ${response.username}`, {
+      body: bodynode.innerHTML,
+    });
+  }
 }
 
 export function getKicked(msg, ws) {

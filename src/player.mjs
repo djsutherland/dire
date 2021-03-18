@@ -2,8 +2,9 @@ import './dom-polyfills';
 import range from 'lodash/range';
 import GraphemeSplitter from 'grapheme-splitter';
 
-import {foolEffects11} from './game-data';
-import {ready, selectorValue} from './helpers';
+import {emoLevels} from './game-data';
+import {capFirst, ready, selectorValue, getIndefiniteArticle,
+        fillKnightKindSelector, fillKnightLevelSelector} from './helpers';
 import {ws, sidesByKind, classNames, selectedToggler} from './rolls';
 
 const splitter = new GraphemeSplitter();
@@ -31,7 +32,14 @@ ws.handlers.set("getUserData", msg => {
       document.getElementById('dice').prepend(die);
     }
     die.setAttribute("src", `/img/${msg.class}.png`);
-    classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${classNames[msg.class]}</a>.`;
+
+    let className;
+    if (msg.class == "knight" && msg.emoKind !== undefined) {
+      className = `${getIndefiniteArticle(msg.emoKind)} ${capFirst(msg.emoKind)} Knight`;
+    } else {
+      className = classNames[msg.class];
+    }
+    classId.innerHTML = `You're <a target="_new" href="/pdfs/${msg.class}.pdf">${className}</a>.`;
   } else {
     document.querySelectorAll("#my-die").forEach(d => d.remove());
     if (classNames[msg.class]) {
@@ -48,6 +56,10 @@ ws.handlers.set("getUserData", msg => {
 
     case "fool":
       handleFool(msg, classId, controls);
+      break;
+
+    case "knight":
+      handleKnight(msg, classId, controls);
       break;
 
     default:
@@ -72,6 +84,50 @@ function handleDieTaking(msg, classId, controls) {
       ws.send(JSON.stringify({action: "player-hand-die"}));
     });
   }
+}
+
+function handleKnight(msg, classId, controls) {
+  controls.innerHTML = `
+    <label>Sacred Emotion: <select id="emoKind" name="emoKind"></select></label>
+    <label>
+      Max creative violence level:
+      <input id="maxViolence" type="number" size="2" min="0" max="6" value="${msg.maxViolence}">
+    </label>
+    <br>
+    <label>Current emotional level: <select id="emoLevel" name="emoLevel"></select></label>
+    <br><span id="emoCapabilities"></span>
+  `;
+  let kind = controls.querySelector('#emoKind');
+  fillKnightKindSelector(kind, msg.emoKind);
+  kind.addEventListener('change', (event) => {
+    ws.send(JSON.stringify({action: "set-knight-kind", emoKind: selectorValue(kind)}));
+  });
+
+  let max = controls.querySelector('#maxViolence');
+  max.addEventListener('change', (event) => {
+      ws.send(JSON.stringify({action: "set-knight-max-violence",
+                              maxViolence: parseInt(max.value, 10)}));
+  });
+
+  let level = controls.querySelector('#emoLevel');
+  fillKnightLevelSelector(level, msg.emoKind, msg.emoLevel);
+  level.addEventListener('change', (event) => {
+    ws.send(JSON.stringify({action: "set-knight-level",
+                            emoLevel: parseInt(selectorValue(level), 10)}));
+  });
+
+  let caps = [], defeatable = [];
+  for (let i = 0; i <= msg.emoLevel; i++) {
+    let [name, simples, defs] = emoLevels[i];
+    caps.push(...simples);
+    if (i <= msg.maxViolence) {
+      defeatable.push(...defs);
+    }
+  }
+  if (defeatable.length > 0) {
+    caps.push(`You could defeat: ${defeatable.join(", ")}.`);
+  }
+  controls.querySelector('#emoCapabilities').innerHTML = caps.join("<br>");
 }
 
 function handleFool(msg, classId, controls) {
@@ -118,7 +174,8 @@ function handleFool(msg, classId, controls) {
         symbsel.querySelector('option[value="?"]').setAttribute("selected", true);
       }
 
-      scribbler.querySelector(`select[name="side"] [value="${msg.foolDie.side}"]`).setAttribute("selected", true);
+      scribbler.querySelector(`select[name="side"] [value="${msg.foolDie.side}"]`)
+               .setAttribute("selected", true);
       scribbler.addEventListener('change', (event) => {
         event.preventDefault();
         ws.send(JSON.stringify({
@@ -144,7 +201,7 @@ function handleFool(msg, classId, controls) {
         scribbler.querySelector(`[name="${i}"] [value="${msg.foolDie.sides[i-1]}"]`).setAttribute("selected", true);
       }
       scribbler.querySelector("[name='fluke']").value = msg.foolDie.effect;  // avoid worrying about escaping
-      for (let inp of scribbler.querySelectorAll("input")) {
+      for (let inp of scribbler.querySelectorAll("input[name$='Symbol']")) {
         inp.addEventListener('input', event => {
           let optval = event.target.name == "posSymbol" ? "+" : "-";
           let symb = splitter.splitGraphemes(event.target.value.trim())[0] || optval;
@@ -153,7 +210,11 @@ function handleFool(msg, classId, controls) {
           }
         });
       }
-      scribbler.addEventListener('change', (event) => {
+
+      // Scribble away; send code 2 seconds after *last* change.
+      let scribbleTimeout;
+
+      function updateFoolDie() {
         ws.send(JSON.stringify({
           action: "fool-set-die",
           posSymbol: scribbler.querySelector('[name="posSymbol"]').value,
@@ -161,6 +222,13 @@ function handleFool(msg, classId, controls) {
           sides: range(1, 7).map(i => selectorValue(scribbler.querySelector(`select[name="${i}"]`))),
           effect: scribbler.querySelector('[name="fluke"]').value,
         }));
+        scribbleTimeout = undefined;
+      }
+
+      scribbler.addEventListener('input', (event) => {
+        if (scribbleTimeout !== undefined)
+          window.clearTimeout(scribbleTimeout);
+        scribbleTimeout = window.setTimeout(updateFoolDie, 1500);
       });
     }
     controls.append(scribbler);
